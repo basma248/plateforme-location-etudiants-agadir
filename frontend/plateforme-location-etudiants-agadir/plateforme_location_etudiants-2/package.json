@@ -1,0 +1,20 @@
+{
+  "name": "plateforme_location_etudiants",
+  "version": "1.0.0",
+  "description": "Backend for the plateforme location étudiants project",
+  "main": "index.js",
+  "scripts": {
+    "test": "phpunit",
+    "start": "php artisan serve",
+    "migrate": "php artisan migrate",
+    "seed": "php artisan db:seed"
+  },
+  "dependencies": {
+    "laravel/framework": "^8.0",
+    "laravel/tinker": "^2.0"
+  },
+  "devDependencies": {
+    "phpunit/phpunit": "^9.0"
+  },
+  "license": "MIT"
+}

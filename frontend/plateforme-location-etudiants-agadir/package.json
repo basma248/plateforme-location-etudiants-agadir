@@ -1,0 +1,30 @@
+{
+  "name": "plateforme-location-etudiants-agadir",
+  "version": "1.0.0",
+  "description": "A platform for student housing in Agadir.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "keywords": [
+    "student",
+    "housing",
+    "agadir",
+    "react"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "^5.2.0",
+    "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "react-scripts": "4.0.3"
+  },
+  "homepage": "."
+}

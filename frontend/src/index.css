@@ -1,0 +1,13 @@
+/* ...existing code... */
+:root{
+  --primary:#1D4E89;
+  --secondary:#48CFCB;
+  --neutral:#F5F5F5;
+  --visitor:#D9D3C7;
+  --text:#222;
+}
+html,body,#root{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--neutral);-webkit-font-smoothing:antialiased;}
+a{color:var(--primary);text-decoration:none;}
+button{font-family:inherit;}
+input{font-family:inherit;}
+/* ...existing code... */

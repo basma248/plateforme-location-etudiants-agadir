@@ -1,0 +1,110 @@
+.advanced-filters {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.advanced-filters__toggle {
+  width: 100%;
+  padding: 16px 20px;
+  background: #fff;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  transition: background 0.2s ease;
+}
+
+.advanced-filters__toggle:hover {
+  background: #f7f7f7;
+}
+
+.advanced-filters__toggle svg {
+  transition: transform 0.3s ease;
+}
+
+.advanced-filters__toggle svg.rotated {
+  transform: rotate(180deg);
+}
+
+.advanced-filters__panel {
+  padding: 20px;
+  border-top: 1px solid #ebebeb;
+  background: #fafafa;
+}
+
+.advanced-filters__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.advanced-filters__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advanced-filters__group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+
+.advanced-filters__group input,
+.advanced-filters__group select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.advanced-filters__group input:focus,
+.advanced-filters__group select:focus {
+  outline: none;
+  border-color: #FF385C;
+  box-shadow: 0 0 0 3px rgba(255, 56, 92, 0.1);
+}
+
+.advanced-filters__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #ebebeb;
+}
+
+.advanced-filters__reset {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.advanced-filters__reset:hover {
+  background: #f7f7f7;
+  border-color: #bbb;
+}
+
+@media (max-width: 640px) {
+  .advanced-filters__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
