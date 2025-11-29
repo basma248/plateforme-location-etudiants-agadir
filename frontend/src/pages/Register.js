@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import './Register.css';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -38,12 +39,15 @@ export default function Register() {
         prenom: formData.prenom,
         email: formData.email,
         telephone: formData.telephone,
-        nomUtilisateur: formData.nomUtilisateur,
-        motDePasse: formData.motDePasse,
-        typeUtilisateur: formData.typeUtilisateur,
+        nom_utilisateur: formData.nomUtilisateur,
+        password: formData.motDePasse,
+        password_confirmation: formData.motDePasse, // Required for Laravel validation
+        type_utilisateur: formData.typeUtilisateur,
         cin: formData.cin,
         ...(formData.typeUtilisateur === 'etudiant' && { cne: formData.cne })
       };
+
+      console.log('Sending user data:', userData); // Debug log
 
       const { register } = await import('../services/authService');
       await register(userData);
@@ -55,57 +59,60 @@ export default function Register() {
     }
   };
 
-  const inputStyle = {
-    padding: 10,
-    borderRadius: 8,
-    border: '1px solid #ddd',
-    fontSize: 14,
-    width: '100%',
-    boxSizing: 'border-box'
-  };
-
-  const labelStyle = {
-    display: 'block',
-    marginBottom: 4,
-    fontSize: 14,
-    fontWeight: 500,
-    color: '#333'
-  };
-
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'linear-gradient(135deg, #1D4E8922 0%, #48CFCB10 50%, #F5F5F5 100%)' }}>
-      <div style={{ width: '100%', maxWidth: 520, background: '#fff', padding: 28, borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
-        <h2 style={{ marginTop: 0, color: '#1D4E89' }}>Inscription</h2>
-        {error && <div style={{ padding: '12px', background: '#ffebee', color: '#c62828', borderRadius: '8px', fontSize: '14px', marginTop: '12px' }}>{error}</div>}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
-          <div>
-            <label style={labelStyle}>Nom *</label>
-            <input
-              required
-              type="text"
-              name="nom"
-              placeholder="Votre nom"
-              value={formData.nom}
-              onChange={handleChange}
-              style={inputStyle}
-            />
+    <div className="register-page-wrapper">
+      <div className="register-container">
+        <div className="register-header">
+          <div className="register-logo">Darna Agadir</div>
+          <div className="register-subtitle">Créez votre compte étudiant</div>
+        </div>
+
+        {error && (
+          <div className="register-error">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="register-form">
+          <div className="register-form-row">
+            <div className="register-input-group">
+              <label className="register-label">
+                Nom <span className="required">*</span>
+              </label>
+              <span className="register-input-icon">👤</span>
+              <input
+                required
+                type="text"
+                name="nom"
+                placeholder="Votre nom"
+                value={formData.nom}
+                onChange={handleChange}
+                className="register-input"
+              />
+            </div>
+
+            <div className="register-input-group">
+              <label className="register-label">
+                Prénom <span className="required">*</span>
+              </label>
+              <span className="register-input-icon">👤</span>
+              <input
+                required
+                type="text"
+                name="prenom"
+                placeholder="Votre prénom"
+                value={formData.prenom}
+                onChange={handleChange}
+                className="register-input"
+              />
+            </div>
           </div>
 
-          <div>
-            <label style={labelStyle}>Prénom *</label>
-            <input
-              required
-              type="text"
-              name="prenom"
-              placeholder="Votre prénom"
-              value={formData.prenom}
-              onChange={handleChange}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>Email *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              Adresse email <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">📧</span>
             <input
               required
               type="email"
@@ -113,12 +120,15 @@ export default function Register() {
               placeholder="votre.email@exemple.com"
               value={formData.email}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-input"
             />
           </div>
 
-          <div>
-            <label style={labelStyle}>Numéro de téléphone *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              Numéro de téléphone <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">📱</span>
             <input
               required
               type="tel"
@@ -126,12 +136,15 @@ export default function Register() {
               placeholder="06XXXXXXXX"
               value={formData.telephone}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-input"
             />
           </div>
 
-          <div>
-            <label style={labelStyle}>Nom d'utilisateur *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              Nom d'utilisateur <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">🔐</span>
             <input
               required
               type="text"
@@ -139,39 +152,48 @@ export default function Register() {
               placeholder="Choisissez un nom d'utilisateur"
               value={formData.nomUtilisateur}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-input"
             />
           </div>
 
-          <div>
-            <label style={labelStyle}>Mot de passe *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              Mot de passe <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">🔒</span>
             <input
               required
               type="password"
               name="motDePasse"
-              placeholder="Créez un mot de passe"
+              placeholder="Créez un mot de passe sécurisé"
               value={formData.motDePasse}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-input"
             />
           </div>
 
-          <div>
-            <label style={labelStyle}>Type d'utilisateur *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              Type d'utilisateur <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">👥</span>
             <select
               required
               name="typeUtilisateur"
               value={formData.typeUtilisateur}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-select"
             >
               <option value="etudiant">Étudiant</option>
               <option value="loueur">Loueur</option>
             </select>
           </div>
 
-          <div>
-            <label style={labelStyle}>CIN *</label>
+          <div className="register-input-group">
+            <label className="register-label">
+              CIN <span className="required">*</span>
+            </label>
+            <span className="register-input-icon">🆔</span>
             <input
               required
               type="text"
@@ -179,13 +201,16 @@ export default function Register() {
               placeholder="Numéro de CIN"
               value={formData.cin}
               onChange={handleChange}
-              style={inputStyle}
+              className="register-input"
             />
           </div>
 
           {formData.typeUtilisateur === 'etudiant' && (
-            <div>
-              <label style={labelStyle}>CNE *</label>
+            <div className="register-input-group">
+              <label className="register-label">
+                CNE <span className="required">*</span>
+              </label>
+              <span className="register-input-icon">🎓</span>
               <input
                 required
                 type="text"
@@ -193,7 +218,7 @@ export default function Register() {
                 placeholder="Numéro de CNE"
                 value={formData.cne}
                 onChange={handleChange}
-                style={inputStyle}
+                className="register-input"
               />
             </div>
           )}
@@ -201,28 +226,22 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            style={{
-              padding: 12,
-              borderRadius: 8,
-              border: 'none',
-              background: loading ? '#ccc' : '#1D4E89',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 16,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginTop: 8,
-              transition: 'background 0.3s ease'
-            }}
-            onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#153d6f')}
-            onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#1D4E89')}
+            className="register-button"
           >
-            {loading ? 'Inscription...' : 'S\'inscrire'}
+            {loading ? (
+              <span className="register-button-loading">
+                <span className="register-spinner"></span>
+                Inscription en cours...
+              </span>
+            ) : (
+              'Créer mon compte'
+            )}
           </button>
         </form>
 
-        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14 }}>
-          <span style={{ color: '#666' }}>Déjà un compte? </span>
-          <Link to="/login" style={{ color: '#1D4E89', textDecoration: 'none', fontWeight: 500 }}>
+        <div className="register-footer">
+          <span>Déjà un compte ?</span>
+          <Link to="/login" className="register-link">
             Se connecter
           </Link>
         </div>

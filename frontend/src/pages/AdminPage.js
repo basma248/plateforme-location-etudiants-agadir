@@ -11,7 +11,6 @@ import {
   deleteAnnonceAdmin,
   createUser,
   deleteUser,
-  reportUser,
   toggleUserStatus
 } from '../services/adminService';
 import './AdminPage.css';
@@ -54,16 +53,35 @@ function AdminPage() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      console.log('Chargement des données admin...');
       const [statsData, annoncesData, usersData] = await Promise.all([
         getDashboardStats(),
         getAllAnnonces(),
         getAllUsers()
       ]);
+      
+      console.log('Stats reçues:', statsData);
+      console.log('Annonces reçues (type):', typeof annoncesData, Array.isArray(annoncesData));
+      console.log('Annonces reçues (contenu):', annoncesData);
+      console.log('Users reçus (type):', typeof usersData, Array.isArray(usersData));
+      console.log('Users reçus (contenu):', usersData);
+      
       setStats(statsData);
-      setAnnonces(annoncesData);
-      setUsers(usersData);
+      // S'assurer que les données sont des tableaux
+      const annoncesArray = Array.isArray(annoncesData) ? annoncesData : (annoncesData?.data?.data || annoncesData?.data || []);
+      const usersArray = Array.isArray(usersData) ? usersData : (usersData?.data?.data || usersData?.data || []);
+      
+      console.log('Annonces finales:', annoncesArray);
+      console.log('Users finaux:', usersArray);
+      
+      setAnnonces(annoncesArray);
+      setUsers(usersArray);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
+      alert('Erreur lors du chargement des données: ' + error.message);
+      // Initialiser avec des tableaux vides en cas d'erreur
+      setAnnonces([]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -89,50 +107,41 @@ function AdminPage() {
   };
 
   const handleDeleteAnnonce = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.')) return;
     
     setLoadingAction(true);
     try {
+      console.log('Suppression de l\'annonce ID:', id);
       await deleteAnnonceAdmin(id);
+      // Recharger les données
       await loadDashboardData();
       alert('Annonce supprimée avec succès');
     } catch (error) {
-      alert('Erreur lors de la suppression: ' + error.message);
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setLoadingAction(false);
     }
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible et supprimera toutes ses annonces.')) return;
     
     setLoadingAction(true);
     try {
+      console.log('Suppression de l\'utilisateur ID:', id);
       await deleteUser(id);
+      // Recharger les données
       await loadDashboardData();
       alert('Utilisateur supprimé avec succès');
     } catch (error) {
-      alert('Erreur lors de la suppression: ' + error.message);
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'));
     } finally {
       setLoadingAction(false);
     }
   };
 
-  const handleReportUser = async (id) => {
-    const reason = prompt('Raison du signalement:');
-    if (!reason) return;
-    
-    setLoadingAction(true);
-    try {
-      await reportUser(id, reason);
-      await loadDashboardData();
-      alert('Utilisateur signalé avec succès');
-    } catch (error) {
-      alert('Erreur lors du signalement: ' + error.message);
-    } finally {
-      setLoadingAction(false);
-    }
-  };
 
   const handleToggleUserStatus = async (id, currentStatus) => {
     setLoadingAction(true);
@@ -248,11 +257,11 @@ function AdminPage() {
                     <p>Annonces signalées</p>
                   </div>
                 </div>
-                <div className="stat-card danger">
-                  <div className="stat-icon">🚨</div>
+                <div className="stat-card warning">
+                  <div className="stat-icon">⏸️</div>
                   <div className="stat-content">
-                    <h3>{stats?.usersSignales || 0}</h3>
-                    <p>Utilisateurs signalés</p>
+                    <h3>{stats?.usersSuspendus || 0}</h3>
+                    <p>Utilisateurs suspendus</p>
                   </div>
                 </div>
               </div>
@@ -311,8 +320,8 @@ function AdminPage() {
           {activeTab === 'annonces' && (
             <div className="admin-annonces">
               <div className="section-header">
-                <h2>Gestion des annonces</h2>
-                <button className="btn-refresh" onClick={loadDashboardData}>
+                <h2>📋 Gestion des annonces</h2>
+                <button className="btn-refresh" onClick={loadDashboardData} disabled={loadingAction}>
                   🔄 Actualiser
                 </button>
               </div>
@@ -341,16 +350,24 @@ function AdminPage() {
                         <tr key={annonce.id} id={`annonce-${annonce.id}`}>
                           <td>{annonce.id}</td>
                           <td>
-                            <strong>{annonce.titre}</strong>
+                            <strong>{annonce.titre || 'Sans titre'}</strong>
+                            {annonce.description && (
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                {annonce.description.substring(0, 50)}...
+                              </div>
+                            )}
                           </td>
-                          <td>{annonce.zone}</td>
-                          <td>{annonce.prix} DH</td>
+                          <td>{annonce.zone || 'N/A'}</td>
+                          <td>{annonce.prix ? `${annonce.prix} DH` : 'N/A'}</td>
                           <td>
-                            <span className="badge">{annonce.type}</span>
+                            <span className="badge">{annonce.type || 'N/A'}</span>
                           </td>
                           <td>
-                            <span className={`badge ${annonce.statut === 'approuve' ? 'success' : annonce.statut === 'en_attente' ? 'warning' : 'danger'}`}>
-                              {annonce.statut || 'approuve'}
+                            <span className={`badge ${annonce.statut === 'approuve' ? 'success' : annonce.statut === 'en_attente' ? 'warning' : annonce.statut === 'rejete' ? 'danger' : 'info'}`}>
+                              {annonce.statut === 'approuve' ? 'Approuvée' : 
+                               annonce.statut === 'en_attente' ? 'En attente' : 
+                               annonce.statut === 'rejete' ? 'Rejetée' : 
+                               annonce.statut || 'Approuvée'}
                             </span>
                           </td>
                           <td>
@@ -395,12 +412,12 @@ function AdminPage() {
           {activeTab === 'users' && (
             <div className="admin-users">
               <div className="section-header">
-                <h2>Gestion des utilisateurs</h2>
+                <h2>👥 Gestion des utilisateurs</h2>
                 <div>
                   <button className="btn-primary" onClick={() => setShowAddUserModal(true)}>
                     ➕ Ajouter un utilisateur
                   </button>
-                  <button className="btn-refresh" onClick={loadDashboardData}>
+                  <button className="btn-refresh" onClick={loadDashboardData} disabled={loadingAction}>
                     🔄 Actualiser
                   </button>
                 </div>
@@ -430,12 +447,13 @@ function AdminPage() {
                         <tr key={user.id} id={`user-${user.id}`}>
                           <td>{user.id}</td>
                           <td>
-                            <strong>{user.nom || 'N/A'}</strong>
+                            <strong>{user.nom || user.prenom || user.nom_utilisateur || 'N/A'}</strong>
+                            {user.prenom && user.nom && <div style={{ fontSize: '12px', color: '#666' }}>{user.prenom} {user.nom}</div>}
                           </td>
                           <td>{user.email}</td>
                           <td>{user.telephone || 'N/A'}</td>
                           <td>
-                            <span className={`badge ${user.role === 'admin' ? 'danger' : 'info'}`}>
+                            <span className={`badge ${user.role === 'admin' || user.role === 'administrator' ? 'danger' : 'info'}`}>
                               {user.role || 'user'}
                             </span>
                           </td>
@@ -447,20 +465,13 @@ function AdminPage() {
                           <td>
                             <div className="action-buttons">
                               <button
-                                className="btn-action btn-warning"
-                                onClick={() => handleReportUser(user.id)}
-                                disabled={loadingAction}
-                              >
-                                🚨 Signaler
-                              </button>
-                              <button
                                 className={`btn-action ${user.suspended ? 'btn-success' : 'btn-warning'}`}
                                 onClick={() => handleToggleUserStatus(user.id, user.suspended)}
                                 disabled={loadingAction}
                               >
                                 {user.suspended ? '✓ Réactiver' : '⏸️ Suspendre'}
                               </button>
-                              {user.role !== 'admin' && (
+                              {user.role !== 'admin' && user.role !== 'administrator' && (
                                 <button
                                   className="btn-action btn-danger"
                                   onClick={() => handleDeleteUser(user.id)}

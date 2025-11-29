@@ -158,32 +158,49 @@ function AjouterAnnoncePage() {
       }
 
       // Préparer les données pour l'API
+      // Récupérer les fichiers uploadés (pas les base64)
+      const imageFilesToUpload = images.filter(img => img instanceof File);
+      
+      console.log('Images à envoyer:', {
+        fichiers: imageFilesToUpload.length,
+        totalPreviews: imagePreviews.length,
+        totalFiles: images.length
+      });
+
+      // S'assurer que meuble est un booléen
+      const meubleValue = formData.meuble === true || formData.meuble === 'true' || formData.meuble === 1 || formData.meuble === '1';
+      
       const annonceData = {
         titre: formData.titre,
         type: formData.type,
         zone: formData.zone,
-        adresse: formData.adresse,
+        adresse: formData.adresse || '',
         prix: parseFloat(formData.prix),
-        surface: parseFloat(formData.surface),
+        surface: formData.surface ? parseFloat(formData.surface) : null,
         nbChambres: parseInt(formData.nbChambres) || 1,
         description: formData.description,
-        descriptionLongue: formData.descriptionLongue,
-        meuble: formData.meuble,
-        disponibilite: formData.disponibilite,
-        equipements: formData.equipements,
-        regles: formData.regles,
-        contact: formData.contact
+        descriptionLongue: formData.descriptionLongue || '',
+        meuble: meubleValue, // Booléen
+        disponibilite: formData.disponibilite || '',
+        equipements: formData.equipements || [],
+        regles: formData.regles || []
       };
-
-      // Pour les images, il faudra utiliser FormData si le backend l'exige
-      // Pour l'instant, on envoie les données en JSON
-      await createAnnonce(annonceData, token);
       
-      alert('Annonce publiée avec succès !');
+      console.log('Données de l\'annonce:', {
+        ...annonceData,
+        meuble: annonceData.meuble,
+        meubleType: typeof annonceData.meuble
+      });
+
+      // Envoyer avec les fichiers uploadés
+      await createAnnonce(annonceData, token, imageFilesToUpload.length > 0 ? imageFilesToUpload : null);
+      
+      alert('Annonce publiée avec succès ! Elle sera visible après validation par l\'administrateur.');
       navigate('/home');
     } catch (error) {
       console.error('Erreur lors de la publication:', error);
-      alert('Une erreur est survenue lors de la publication: ' + (error.message || 'Erreur inconnue'));
+      const errorMessage = error.message || 'Erreur inconnue';
+      alert('Une erreur est survenue lors de la publication: ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -379,7 +396,7 @@ function AjouterAnnoncePage() {
             {/* Photos */}
             <section className="form-section">
               <h2>Photos *</h2>
-              <p className="section-hint">Ajoutez jusqu'à 10 photos (max 5MB chacune)</p>
+              <p className="section-hint">Ajoutez jusqu'à 10 photos depuis votre ordinateur (max 5MB chacune)</p>
               
               <div className="images-upload">
                 {imagePreviews.map((preview, index) => (

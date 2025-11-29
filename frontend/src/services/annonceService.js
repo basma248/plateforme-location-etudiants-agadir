@@ -1,21 +1,47 @@
 // Service pour gérer les appels API des annonces
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+
+// Fonction helper pour récupérer le token
+const getToken = () => {
+  return localStorage.getItem('token');
+};
 
 /**
  * Récupère toutes les annonces avec filtres optionnels
  */
 export const getAnnonces = async (filters = {}) => {
+  // Déclarer url en dehors du try pour qu'elle soit accessible dans le catch
+  let url;
+  
   try {
     const queryParams = new URLSearchParams();
+    
+    // Convertir les noms de champs du frontend vers le backend
+    const fieldMapping = {
+      prixMin: 'prix_min',
+      prixMax: 'prix_max',
+      surfaceMin: 'surface_min',
+      surfaceMax: 'surface_max',
+      nbChambres: 'nb_chambres',
+      sortBy: 'sort_by',
+      sortDirection: 'sort_direction'
+    };
     
     // Ajouter les filtres aux paramètres de requête
     Object.keys(filters).forEach(key => {
       if (filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
-        queryParams.append(key, filters[key]);
+        const backendKey = fieldMapping[key] || key;
+        // Gérer le tri spécial pour prix_desc
+        if (key === 'sortBy' && filters[key] === 'prix_desc') {
+          queryParams.append('sort_by', 'prix');
+          queryParams.append('sort_direction', 'desc');
+        } else {
+          queryParams.append(backendKey, filters[key]);
+        }
       }
     });
 
-    const url = `${API_BASE_URL}/annonces${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    url = `${API_BASE_URL}/annonces${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -29,11 +55,40 @@ export const getAnnonces = async (filters = {}) => {
     }
 
     const data = await response.json();
-    return data;
+    console.log('Réponse brute du backend (getAnnonces):', data);
+    
+    // Le backend retourne {success: true, data: {data: [...], current_page, ...}}
+    // Extraire le tableau des annonces
+    if (data.success && data.data) {
+      // Si c'est un objet paginé Laravel (structure: {success: true, data: {data: [...], current_page: 1, ...}})
+      if (data.data.data && Array.isArray(data.data.data)) {
+        console.log('Annonces extraites (paginé):', data.data.data.length, 'annonces');
+        return data.data.data; // Retourner le tableau des annonces
+      }
+      // Si c'est directement un tableau (structure: {success: true, data: [...]})
+      if (Array.isArray(data.data)) {
+        console.log('Annonces extraites (tableau direct):', data.data.length, 'annonces');
+        return data.data;
+      }
+    }
+    // Si pas de structure success/data, vérifier si c'est directement un tableau
+    if (Array.isArray(data)) {
+      console.log('Annonces extraites (tableau direct sans wrapper):', data.length, 'annonces');
+      return data;
+    }
+    // Si c'est un objet avec une propriété data qui est un tableau
+    if (data.data && Array.isArray(data.data)) {
+      console.log('Annonces extraites (data direct):', data.data.length, 'annonces');
+      return data.data;
+    }
+    // Fallback: retourner un tableau vide si la structure est inattendue
+    console.warn('Structure de données inattendue:', data);
+    return [];
   } catch (error) {
     console.error('Erreur lors de la récupération des annonces:', error);
-    // Retourner des données d'exemple en cas d'erreur (pour le développement)
-    return getExampleAnnonces();
+    console.error('URL appelée:', url || 'URL non définie');
+    // NE PAS retourner des données d'exemple - retourner un tableau vide
+    return [];
   }
 };
 
@@ -42,46 +97,251 @@ export const getAnnonces = async (filters = {}) => {
  */
 export const getAnnonceById = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/annonces/${id}`, {
+    const url = `${API_BASE_URL}/annonces/${id}`;
+    console.log('Appel API getAnnonceById:', url);
+    
+    // Récupérer le token si l'utilisateur est connecté
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    // Ajouter le token si présent (pour permettre l'enregistrement des vues)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 Token envoyé avec la requête (premiers caractères):', token.substring(0, 20) + '...');
+    } else {
+      console.log('⚠️ Aucun token trouvé - l\'utilisateur n\'est peut-être pas connecté');
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: headers,
     });
 
+    console.log('Statut de la réponse:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      const contentType = response.headers.get('content-type');
+      let errorData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          const errorText = await response.text();
+          console.error('Erreur HTTP - Réponse texte:', errorText);
+          errorData = { message: errorText };
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Erreur HTTP - Réponse non-JSON:', errorText);
+        errorData = { message: errorText || `Erreur HTTP: ${response.status} ${response.statusText}` };
+      }
+      
+      const errorMessage = errorData.message || `Erreur HTTP: ${response.status} ${response.statusText}`;
+      console.error('❌ Erreur API:', errorMessage);
+      console.error('📋 Détails:', errorData);
+      
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = errorData;
+      throw error;
     }
 
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Réponse non-JSON reçue:', text);
+      throw new Error('Réponse invalide du serveur (non-JSON)');
+    }
+    
     const data = await response.json();
-    return data;
+    console.log('✅ Données brutes reçues (getAnnonceById):', data);
+    
+    // Le backend retourne {success: true, data: {...}}
+    if (data.success && data.data) {
+      console.log('✅ Annonce extraite:', data.data.id, data.data.titre);
+      console.log('📸 Images:', data.data.all_images?.length || data.data.images?.length || 0);
+      console.log('👤 Propriétaire:', data.data.proprietaire ? 'présent' : 'absent');
+      return data.data;
+    }
+    
+    // Si pas de structure success/data, retourner directement
+    if (data.id) {
+      console.log('✅ Annonce retournée directement:', data.id, data.titre);
+      return data;
+    }
+    
+    // Si aucune structure reconnue
+    console.warn('⚠️ Structure de données inattendue:', data);
+    throw new Error('Structure de données inattendue du serveur');
   } catch (error) {
     console.error('Erreur lors de la récupération de l\'annonce:', error);
-    // Retourner une annonce d'exemple
-    return getExampleAnnonce(id);
+    console.error('ID demandé:', id);
+    throw error; // Ne pas retourner d'exemple, laisser le composant gérer l'erreur
   }
 };
 
 /**
  * Crée une nouvelle annonce
  */
-export const createAnnonce = async (annonceData, token) => {
+export const createAnnonce = async (annonceData, token, imageFiles = null) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/annonces`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(annonceData),
-    });
+    // Si des fichiers images sont fournis, utiliser FormData
+    if (imageFiles && imageFiles.length > 0) {
+      const formData = new FormData();
+      
+      // Ajouter les champs de l'annonce
+      formData.append('titre', annonceData.titre);
+      formData.append('type', annonceData.type);
+      formData.append('zone', annonceData.zone);
+      if (annonceData.adresse) formData.append('adresse', annonceData.adresse);
+      formData.append('prix', annonceData.prix);
+      if (annonceData.surface) formData.append('surface', annonceData.surface);
+      formData.append('nb_chambres', annonceData.nbChambres || annonceData.nb_chambres || 1);
+      formData.append('description', annonceData.description);
+      if (annonceData.descriptionLongue) formData.append('description_longue', annonceData.descriptionLongue);
+      // Convertir meuble en booléen pour Laravel (FormData envoie toujours des strings)
+      // Envoyer "1" pour true, "0" pour false
+      const meubleValue = annonceData.meuble === true || annonceData.meuble === 'true' || annonceData.meuble === 1 || annonceData.meuble === '1';
+      formData.append('meuble', meubleValue ? '1' : '0');
+      console.log('Meuble envoyé:', meubleValue, '(valeur originale:', annonceData.meuble, ')');
+      if (annonceData.disponibilite) formData.append('disponibilite', annonceData.disponibilite);
+      
+      // Ajouter les fichiers images - utiliser le format correct pour Laravel
+      let validImageCount = 0;
+      imageFiles.forEach((file, index) => {
+        if (file instanceof File) {
+          // Vérifier que c'est bien un fichier image
+          if (file.type && file.type.startsWith('image/')) {
+            // Laravel attend image_files[0], image_files[1], etc.
+            formData.append(`image_files[${index}]`, file, file.name);
+            validImageCount++;
+            console.log(`Fichier ${index} ajouté:`, file.name, file.type, (file.size / 1024).toFixed(2), 'KB');
+          } else {
+            console.warn(`Fichier ${index} ignoré (pas une image):`, file.name, file.type);
+          }
+        }
+      });
+      
+      console.log('FormData préparé avec', validImageCount, 'fichiers images valides sur', imageFiles.length, 'fichiers');
+      
+      // Ajouter les URLs d'images si présentes
+      if (annonceData.images && Array.isArray(annonceData.images) && annonceData.images.length > 0) {
+        annonceData.images.forEach((url, index) => {
+          formData.append(`images[${index}]`, url);
+        });
+      }
+      
+      // Ajouter les équipements
+      if (annonceData.equipements && Array.isArray(annonceData.equipements)) {
+        annonceData.equipements.forEach((eq, index) => {
+          formData.append(`equipements[${index}]`, eq);
+        });
+      }
+      
+      // Ajouter les règles
+      if (annonceData.regles && Array.isArray(annonceData.regles)) {
+        annonceData.regles.forEach((regle, index) => {
+          formData.append(`regles[${index}]`, regle);
+        });
+      }
 
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      const response = await fetch(`${API_BASE_URL}/annonces`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement avec le boundary
+        },
+        body: formData,
+      });
+
+      const contentType = response.headers.get('content-type');
+      
+      if (!response.ok) {
+        let errorMessage = `Erreur HTTP: ${response.status}`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+            if (errorData.errors) {
+              const errorMessages = Object.values(errorData.errors).flat().join(', ');
+              errorMessage = errorMessages || errorMessage;
+            }
+          } catch (e) {
+            // Ignorer l'erreur de parsing
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return data.data || data;
+    } else {
+      // Pas de fichiers, utiliser JSON comme avant
+      const backendData = {
+        titre: annonceData.titre,
+        type: annonceData.type,
+        zone: annonceData.zone,
+        adresse: annonceData.adresse || null,
+        prix: annonceData.prix,
+        surface: annonceData.surface || null,
+        nb_chambres: annonceData.nbChambres || annonceData.nb_chambres || 1,
+        description: annonceData.description,
+        description_longue: annonceData.descriptionLongue || annonceData.description_longue || null,
+        meuble: annonceData.meuble || false,
+        disponibilite: annonceData.disponibilite || null,
+        images: annonceData.images || [],
+        equipements: annonceData.equipements || [],
+        regles: annonceData.regles || [],
+      };
+
+      const response = await fetch(`${API_BASE_URL}/annonces`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(backendData),
+      });
+
+      const contentType = response.headers.get('content-type');
+      
+      if (!response.ok) {
+        let errorMessage = `Erreur HTTP: ${response.status}`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            if (errorData.errors) {
+              const errorMessages = Object.values(errorData.errors).flat().join(', ');
+              errorMessage = errorMessages || errorData.message || errorMessage;
+            } else if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (e) {
+            console.error('Erreur lors du parsing de l\'erreur:', e);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+        }
+        
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+      }
+
+      const data = await response.json();
+      // Le backend retourne {success: true, data: {...}}
+      return data.data || data;
     }
-
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.error('Erreur lors de la création de l\'annonce:', error);
     throw error;
@@ -107,7 +367,8 @@ export const updateAnnonce = async (id, annonceData, token) => {
     }
 
     const data = await response.json();
-    return data;
+    // Le backend retourne {success: true, data: [...]}
+    return data.data || data;
   } catch (error) {
     console.error('Erreur lors de la mise à jour de l\'annonce:', error);
     throw error;
@@ -133,6 +394,145 @@ export const deleteAnnonce = async (id, token) => {
     return true;
   } catch (error) {
     console.error('Erreur lors de la suppression de l\'annonce:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupère les favoris de l'utilisateur connecté
+ */
+export const getFavorites = async (token) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/annonces/favorites/list`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Ignore parsing error
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log('Réponse brute getFavorites:', data);
+    
+    // Le backend retourne {success: true, data: {data: [...], current_page, ...}}
+    if (data.success && data.data) {
+      // Si c'est un objet paginé Laravel
+      if (data.data.data && Array.isArray(data.data.data)) {
+        console.log('Favoris extraits (paginé):', data.data.data.length, 'annonces');
+        return data.data.data;
+      }
+      // Si c'est directement un tableau
+      if (Array.isArray(data.data)) {
+        console.log('Favoris extraits (tableau direct):', data.data.length, 'annonces');
+        return data.data;
+      }
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des favoris:', error);
+    throw error;
+  }
+};
+
+/**
+ * Ajoute/Retire une annonce des favoris
+ */
+/**
+ * Supprime une annonce des favoris de l'utilisateur
+ */
+export const removeFavorite = async (annonceId, token) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/annonces/${annonceId}/favorite`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Ignore parsing error
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du favori:', error);
+    throw error;
+  }
+};
+
+export const toggleFavorite = async (annonceId, token) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/annonces/${annonceId}/favorite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Ignore parsing error
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    
+    // Le backend retourne {success: true, favorited: true/false, message: ...}
+    if (data.success !== undefined) {
+      return {
+        favorited: data.favorited,
+        message: data.message
+      };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Erreur lors de la modification des favoris:', error);
     throw error;
   }
 };

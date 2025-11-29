@@ -1,5 +1,5 @@
 // Service pour gérer les messages privés
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 /**
  * Récupère les messages d'une conversation
@@ -10,20 +10,32 @@ export const getMessages = async (annonceId, token) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Ignore parsing error
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Erreur lors de la récupération des messages:', error);
-    // Retourner des messages d'exemple pour le développement
-    return getExampleMessages(annonceId);
+    throw error;
   }
 };
 
@@ -36,6 +48,7 @@ export const sendMessage = async (annonceId, content, token, extraData = {}) => 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -46,7 +59,26 @@ export const sendMessage = async (annonceId, content, token, extraData = {}) => 
     });
 
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          if (errorData.errors) {
+            const errorMessages = Object.values(errorData.errors).flat().join(', ');
+            errorMessage = errorMessages || errorData.message || errorMessage;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (e) {
+          console.error('Erreur lors du parsing de l\'erreur:', e);
+        }
+      }
+      
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      throw error;
     }
 
     const data = await response.json();
@@ -66,39 +98,41 @@ export const getConversations = async (token) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // Ignore parsing error
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
+    console.log('Réponse brute getConversations:', data);
+    
+    // Le backend retourne {success: true, data: [...]}
+    // Retourner la structure complète pour que le composant puisse extraire les données
     return data;
   } catch (error) {
     console.error('Erreur lors de la récupération des conversations:', error);
-    throw error;
+    // Retourner une structure vide plutôt que de throw pour éviter de casser l'interface
+    return {
+      success: false,
+      data: [],
+      message: error.message || 'Erreur lors de la récupération des conversations'
+    };
   }
 };
-
-// ===== DONNÉES D'EXEMPLE =====
-
-const getExampleMessages = (annonceId) => {
-  return [
-    {
-      id: 1,
-      sender: 'proprietaire',
-      content: 'Bonjour ! Merci pour votre intérêt. La chambre est toujours disponible. Souhaitez-vous organiser une visite ?',
-      timestamp: new Date(Date.now() - 3600000),
-    },
-    {
-      id: 2,
-      sender: 'moi',
-      content: 'Bonjour, oui je serais intéressé(e). Quand serait-il possible de visiter ?',
-      timestamp: new Date(Date.now() - 1800000),
-    }
-  ];
-};
-
 

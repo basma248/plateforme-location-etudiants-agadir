@@ -12,6 +12,8 @@ import LogementsPage from './pages/LogementsPage';
 import ColocationPage from './pages/ColocationPage';
 import AjouterAnnoncePage from './pages/AjouterAnnoncePage';
 import ProfilPage from './pages/ProfilPage';
+import FavorisPage from './pages/FavorisPage';
+import VuesPage from './pages/VuesPage';
 import ContactPage from './pages/ContactPage';
 import AproposPage from './pages/AproposPage';
 import AdminPage from './pages/AdminPage';
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="/colocation" element={<ColocationPage />} />
         <Route path="/ajouter-annonce" element={<AjouterAnnoncePage />} />
         <Route path="/profil" element={<ProfilPage />} />
+        <Route path="/favoris" element={<FavorisPage />} />
+        <Route path="/vues" element={<VuesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/a-propos" element={<AproposPage />} />
         <Route 

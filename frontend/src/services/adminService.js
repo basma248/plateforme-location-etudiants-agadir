@@ -1,5 +1,5 @@
 // Service pour gérer les appels API de l'administration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 /**
  * Récupère le token d'authentification
@@ -13,33 +13,52 @@ const getToken = () => {
  */
 export const getDashboardStats = async () => {
   try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/admin/stats`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (isJson) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error('Réponse d\'erreur:', text.substring(0, 200));
+        }
+      } else {
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 200));
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur (non-JSON)');
     }
 
     const data = await response.json();
-    return data;
+    // Le backend retourne {success: true, data: {...}}
+    return data.data || data;
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);
-    // Retourner des données d'exemple en cas d'erreur
-    return {
-      totalAnnonces: 45,
-      totalUsers: 128,
-      totalMessages: 234,
-      annoncesEnAttente: 3,
-      annoncesSignalees: 2,
-      usersSignales: 1,
-      recentAnnonces: 5,
-      recentUsers: 3
-    };
+    throw error;
   }
 };
 
@@ -58,24 +77,62 @@ export const getAllAnnonces = async (filters = {}) => {
 
     const url = `${API_BASE_URL}/admin/annonces${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (isJson) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error('Réponse d\'erreur:', text.substring(0, 200));
+        }
+      } else {
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 200));
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur (non-JSON)');
     }
 
     const data = await response.json();
-    return data;
+    // Le backend retourne {success: true, data: {data: [...], current_page, ...}}
+    if (data.success && data.data) {
+      // Si c'est un objet paginé Laravel
+      if (data.data.data && Array.isArray(data.data.data)) {
+        return data.data.data; // Retourner le tableau des annonces
+      }
+      // Si c'est directement un tableau
+      if (Array.isArray(data.data)) {
+        return data.data;
+      }
+    }
+    return [];
   } catch (error) {
     console.error('Erreur lors de la récupération des annonces:', error);
-    // Retourner des données d'exemple
-    return getExampleAnnonces();
+    throw error;
   }
 };
 
@@ -142,24 +199,62 @@ export const getAllUsers = async (filters = {}) => {
 
     const url = `${API_BASE_URL}/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (isJson) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error('Réponse d\'erreur:', text.substring(0, 200));
+        }
+      } else {
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 200));
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur (non-JSON)');
     }
 
     const data = await response.json();
-    return data;
+    // Le backend retourne {success: true, data: {data: [...], current_page, ...}}
+    if (data.success && data.data) {
+      // Si c'est un objet paginé Laravel
+      if (data.data.data && Array.isArray(data.data.data)) {
+        return data.data.data; // Retourner le tableau des utilisateurs
+      }
+      // Si c'est directement un tableau
+      if (Array.isArray(data.data)) {
+        return data.data;
+      }
+    }
+    return [];
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
-    // Retourner des données d'exemple
-    return getExampleUsers();
+    throw error;
   }
 };
 
@@ -208,31 +303,6 @@ export const deleteUser = async (id) => {
     return true;
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);
-    throw error;
-  }
-};
-
-/**
- * Signale un utilisateur
- */
-export const reportUser = async (id, reason) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${id}/report`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
-      },
-      body: JSON.stringify({ reason }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Erreur lors du signalement:', error);
     throw error;
   }
 };

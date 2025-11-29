@@ -38,10 +38,16 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.avatar-edit {
+.avatar-actions {
   position: absolute;
   bottom: 0;
   right: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.avatar-edit,
+.avatar-delete {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -53,10 +59,21 @@
   cursor: pointer;
   border: 3px solid #fff;
   transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.avatar-delete {
+  background: #dc3545;
 }
 
 .avatar-edit:hover {
   background: #E61E4D;
+  transform: scale(1.1);
+}
+
+.avatar-delete:hover {
+  background: #c82333;
   transform: scale(1.1);
 }
 
@@ -97,6 +114,17 @@
 .stat-card:hover {
   background: #ebebeb;
   transform: translateY(-2px);
+}
+
+.stat-card-clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stat-card-clickable:hover {
+  transform: translateY(-4px);
+  background: #e9ecef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ChatModal from '../components/ChatModal/ChatModal';
 import { getAnnonceById } from '../services/annonceService';
+import { isAuthenticated } from '../services/authService';
 import './AnnonceDetail.css';
 
 function AnnonceDetail() {
@@ -12,57 +14,148 @@ function AnnonceDetail() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
 
-  // Données d'exemple
-  const exampleAnnonces = {
-    1: {
-      id: 1,
-      titre: 'Chambre moderne près de l\'université',
-      zone: 'Universiapolis',
-      prix: 1500,
-      type: 'chambre',
-      surface: 15,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Chambre spacieuse et lumineuse dans un appartement partagé. Proche de toutes les commodités et des transports. La chambre est entièrement meublée avec un lit, un bureau, une armoire et une étagère. L\'appartement dispose d\'une cuisine équipée, d\'un salon commun et d\'une salle de bain partagée. Internet haut débit inclus. Proche des universités et des transports en commun.',
-      descriptionLongue: 'Cette magnifique chambre se trouve dans un appartement moderne et bien entretenu. Elle est parfaite pour un étudiant cherchant un logement confortable et bien situé. L\'appartement est situé au 3ème étage avec ascenseur. Vous partagerez l\'appartement avec 2 autres étudiants sympas et respectueux. La cuisine est entièrement équipée (réfrigérateur, four, micro-ondes, lave-vaisselle). Le salon commun est spacieux avec TV et canapé. La salle de bain est partagée mais toujours propre. Internet fibre optique inclus dans le loyer. Charges comprises (eau, électricité, internet).',
-      images: [
-        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
-        'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800',
-        'https://images.unsplash.com/photo-1556912172-45b7abe8b7e8?w=800'
-      ],
-      rating: 4.8,
-      nbAvis: 24,
-      proprietaire: {
-        nom: 'Ahmed Benali',
-        email: 'ahmed.benali@example.com',
-        telephone: '+212 6 12 34 56 78',
-        avatar: 'https://i.pravatar.cc/150?img=12',
-        verifie: true
-      },
-      disponibilite: 'Immédiate',
-      adresse: 'Rue Mohammed V, Universiapolis, Agadir',
-      equipements: ['Wi-Fi', 'Chauffage', 'Lave-linge', 'Parking', 'Ascenseur'],
-      regles: ['Non-fumeur', 'Animaux non autorisés', 'Pas de fêtes']
-    }
-  };
+  // Les données d'exemple ont été supprimées - on utilise uniquement les données du backend
 
   useEffect(() => {
     const loadAnnonce = async () => {
       setLoading(true);
       try {
+        console.log('🔄 Chargement de l\'annonce ID:', id);
+        console.log('📡 Appel API en cours...');
+        
         const data = await getAnnonceById(id);
-        setAnnonce(data);
+        
+        console.log('✅ Données reçues du backend:', data);
+        console.log('📋 Type de données:', typeof data);
+        console.log('📋 Est un objet:', data && typeof data === 'object');
+        console.log('📋 A un ID:', data?.id);
+        console.log('📋 A un titre:', data?.titre);
+        
+        if (!data || !data.id) {
+          console.error('❌ Données invalides reçues:', data);
+          throw new Error('Aucune donnée valide reçue du serveur');
+        }
+
+        // Mapper les données du backend vers le format attendu par le frontend
+        // Le backend retourne déjà tout dans le bon format, mais on s'assure que tout est présent
+        const mappedAnnonce = {
+          id: data.id,
+          titre: data.titre || 'Sans titre',
+          type: data.type,
+          zone: data.zone || '',
+          adresse: data.adresse || data.zone || '',
+          prix: parseFloat(data.prix) || 0,
+          surface: data.surface ? parseFloat(data.surface) : null,
+          nbChambres: data.nbChambres || data.nb_chambres || 1,
+          nb_chambres: data.nb_chambres || data.nbChambres || 1,
+          description: data.description || '',
+          descriptionLongue: data.descriptionLongue || data.description_longue || data.description || '',
+          description_longue: data.description_longue || data.descriptionLongue || data.description || '',
+          meuble: data.meuble || false,
+          disponibilite: data.disponibilite || '',
+          statut: data.statut || 'approuve',
+          rating: data.rating ? (typeof data.rating === 'string' ? parseFloat(data.rating) : parseFloat(data.rating)) : null,
+          nbAvis: data.nb_avis || 0,
+          vues: data.vues || 0,
+          // Images: utiliser all_images ou images (doit être un tableau)
+          images: Array.isArray(data.all_images) ? data.all_images : 
+                 Array.isArray(data.images) ? data.images : 
+                 [],
+          all_images: Array.isArray(data.all_images) ? data.all_images : 
+                     Array.isArray(data.images) ? data.images : 
+                     [],
+          main_image: data.main_image || (Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : null),
+          // Équipements: utiliser equipements_list ou equipements
+          equipements: Array.isArray(data.equipements_list) ? data.equipements_list : 
+                      Array.isArray(data.equipements) ? data.equipements : 
+                      [],
+          equipements_list: Array.isArray(data.equipements_list) ? data.equipements_list : 
+                           Array.isArray(data.equipements) ? data.equipements : 
+                           [],
+          // Règles: utiliser regles_list ou regles
+          regles: Array.isArray(data.regles_list) ? data.regles_list : 
+                 Array.isArray(data.regles) ? data.regles : 
+                 [],
+          regles_list: Array.isArray(data.regles_list) ? data.regles_list : 
+                      Array.isArray(data.regles) ? data.regles : 
+                      [],
+          // Propriétaire: utiliser les données du backend
+          proprietaire: data.proprietaire || (data.user ? {
+            id: data.user.id,
+            nom: data.user.nom || '',
+            prenom: data.user.prenom || '',
+            email: data.user.email || '',
+            telephone: data.user.telephone || '',
+            avatar: data.user.avatar || data.user.profile_image || null,
+            verifie: data.user.email_verifie || false,
+            nomComplet: data.proprietaire?.nomComplet || `${data.user.prenom || ''} ${data.user.nom || ''}`.trim() || data.user.email || 'Propriétaire'
+          } : null),
+          // Formatage
+          prix_formatted: data.prix_formatted || `${parseFloat(data.prix) || 0} MAD`,
+        };
+        
+        console.log('✅ Annonce mappée avec succès:', {
+          id: mappedAnnonce.id,
+          titre: mappedAnnonce.titre,
+          images_count: mappedAnnonce.images.length,
+          equipements_count: mappedAnnonce.equipements.length,
+          regles_count: mappedAnnonce.regles.length,
+          has_proprietaire: !!mappedAnnonce.proprietaire,
+        });
+        console.log('📸 Images:', mappedAnnonce.images);
+        console.log('👤 Propriétaire:', mappedAnnonce.proprietaire);
+        
+        // Vérification finale avant de définir l'état
+        if (!mappedAnnonce.id || !mappedAnnonce.titre) {
+          console.error('❌ Données invalides après mapping:', mappedAnnonce);
+          throw new Error('Données de l\'annonce invalides après traitement');
+        }
+        
+        setAnnonce(mappedAnnonce);
+        // Réinitialiser l'index de l'image si nécessaire
+        if (mappedAnnonce.images && mappedAnnonce.images.length > 0) {
+          setCurrentImageIndex(0);
+        }
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'annonce:', error);
-        // En cas d'erreur, utiliser les données d'exemple
-        setAnnonce(exampleAnnonces[id] || exampleAnnonces[1]);
+        console.error('❌ Erreur lors du chargement de l\'annonce:', error);
+        console.error('📋 Détails de l\'erreur:', error.message);
+        console.error('🆔 ID utilisé:', id);
+        console.error('📝 Type de l\'ID:', typeof id);
+        console.error('📊 Statut HTTP:', error.status);
+        console.error('📦 Données d\'erreur:', error.data);
+        console.error('🔍 Stack:', error.stack);
+        
+        // Afficher plus d'informations sur l'erreur
+        if (error.status === 404 || error.message.includes('404') || error.message.includes('introuvable')) {
+          console.error('⚠️ L\'annonce n\'existe pas ou n\'est pas accessible');
+          console.error('💡 Vérifications à faire:');
+          console.error('   1. Vérifier que l\'annonce existe dans la base de données');
+          console.error('   2. Vérifier que l\'annonce a le statut "approuve"');
+          console.error('   3. Tester l\'API directement: http://localhost:8000/api/annonces/' + id);
+          console.error('   4. Vérifier les logs Laravel: storage/logs/laravel.log');
+        } else if (error.status === 500) {
+          console.error('⚠️ Erreur serveur - Vérifier les logs Laravel');
+        } else if (error.message.includes('JSON')) {
+          console.error('⚠️ Erreur de parsing JSON - Le serveur a peut-être retourné une erreur HTML');
+        }
+        
+        // NE PAS utiliser les données d'exemple - laisser l'état null pour afficher l'erreur
+        setAnnonce(null);
       } finally {
         setLoading(false);
       }
     };
 
-    loadAnnonce();
+    if (id) {
+      console.log('ID récupéré depuis useParams:', id);
+      loadAnnonce();
+    } else {
+      console.warn('Aucun ID trouvé dans les paramètres de route');
+      setLoading(false);
+      setAnnonce(null);
+    }
   }, [id]);
 
   const formatPrice = (price) => {
@@ -100,10 +193,33 @@ function AnnonceDetail() {
     return (
       <div className="annonce-detail-wrapper">
         <Navbar />
-        <div className="error-container">
-          <h2>Annonce introuvable</h2>
-          <p>Cette annonce n'existe pas ou a été supprimée.</p>
-          <Link to="/home" className="btn-back">Retour à l'accueil</Link>
+        <div className="error-container" style={{ padding: '48px 24px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '28px', marginBottom: '16px', color: '#222' }}>Annonce introuvable</h2>
+          <p style={{ fontSize: '16px', color: '#717171', marginBottom: '8px' }}>
+            Cette annonce n'existe pas ou a été supprimée.
+          </p>
+          <p style={{ fontSize: '14px', color: '#999', marginBottom: '24px' }}>
+            ID recherché: <strong>{id}</strong>
+          </p>
+          <p style={{ fontSize: '13px', color: '#999', marginBottom: '32px', fontStyle: 'italic' }}>
+            Vérifiez la console du navigateur (F12) pour plus de détails sur l'erreur.
+          </p>
+          <Link 
+            to="/home" 
+            className="btn-back"
+            style={{
+              display: 'inline-block',
+              padding: '12px 24px',
+              backgroundColor: '#FF385C',
+              color: '#fff',
+              textDecoration: 'none',
+              borderRadius: '8px',
+              fontWeight: '600',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            Retour à l'accueil
+          </Link>
         </div>
         <Footer />
       </div>
@@ -124,13 +240,19 @@ function AnnonceDetail() {
               <h1 className="annonce-detail__title">{annonce.titre}</h1>
               <div className="annonce-detail__meta">
                 <span className="annonce-detail__location">📍 {annonce.adresse || annonce.zone}</span>
-                {annonce.rating && (
+                {annonce.rating && typeof annonce.rating === 'number' && !isNaN(annonce.rating) && (
                   <div className="annonce-detail__rating">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF385C">
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                     </svg>
                     <span>{annonce.rating.toFixed(1)}</span>
                     {annonce.nbAvis && <span className="nb-avis">({annonce.nbAvis} avis)</span>}
+                  </div>
+                )}
+                {annonce.vues !== undefined && (
+                  <div className="annonce-detail__views" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '16px', color: '#717171' }}>
+                    <span>👁️</span>
+                    <span>{annonce.vues} {annonce.vues === 1 ? 'vue' : 'vues'}</span>
                   </div>
                 )}
               </div>
@@ -141,32 +263,63 @@ function AnnonceDetail() {
             </div>
           </div>
 
-          {/* Galerie d'images */}
+          {/* Galerie d'images - Carrousel */}
           <div className="annonce-detail__gallery">
-            <div className="gallery-main">
-              {annonce.images && annonce.images[currentImageIndex] ? (
-                <img
-                  src={annonce.images[currentImageIndex]}
-                  alt={annonce.titre}
-                  className="gallery-main-image"
-                />
-              ) : (
+            {annonce.images && annonce.images.length > 0 ? (
+              <>
+                <div className="gallery-main">
+                  <img
+                    src={annonce.images[currentImageIndex]}
+                    alt={annonce.titre}
+                    className="gallery-main-image"
+                  />
+                  {annonce.images.length > 1 && (
+                    <>
+                      <button
+                        className="gallery-nav gallery-nav-prev"
+                        onClick={() => setCurrentImageIndex((prev) => 
+                          prev === 0 ? annonce.images.length - 1 : prev - 1
+                        )}
+                        aria-label="Image précédente"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        className="gallery-nav gallery-nav-next"
+                        onClick={() => setCurrentImageIndex((prev) => 
+                          prev === annonce.images.length - 1 ? 0 : prev + 1
+                        )}
+                        aria-label="Image suivante"
+                      >
+                        ›
+                      </button>
+                      <div className="gallery-counter">
+                        {currentImageIndex + 1} / {annonce.images.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {annonce.images.length > 1 && (
+                  <div className="gallery-thumbnails">
+                    {annonce.images.map((img, index) => (
+                      <button
+                        key={index}
+                        className={`gallery-thumbnail ${index === currentImageIndex ? 'active' : ''}`}
+                        onClick={() => setCurrentImageIndex(index)}
+                        onMouseEnter={() => setCurrentImageIndex(index)}
+                      >
+                        <img src={img} alt={`${annonce.titre} ${index + 1}`} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="gallery-main">
                 <div className="gallery-placeholder">
                   <span>🏠</span>
+                  <p>Aucune image disponible</p>
                 </div>
-              )}
-            </div>
-            {annonce.images && annonce.images.length > 1 && (
-              <div className="gallery-thumbnails">
-                {annonce.images.map((img, index) => (
-                  <button
-                    key={index}
-                    className={`gallery-thumbnail ${index === currentImageIndex ? 'active' : ''}`}
-                    onClick={() => setCurrentImageIndex(index)}
-                  >
-                    <img src={img} alt={`${annonce.titre} ${index + 1}`} />
-                  </button>
-                ))}
               </div>
             )}
           </div>
@@ -183,20 +336,24 @@ function AnnonceDetail() {
               <section className="detail-section">
                 <h2>Caractéristiques</h2>
                 <div className="features-grid">
-                  <div className="feature-item">
-                    <span className="feature-icon">📐</span>
-                    <div>
-                      <div className="feature-label">Surface</div>
-                      <div className="feature-value">{annonce.surface} m²</div>
+                  {annonce.surface && (
+                    <div className="feature-item">
+                      <span className="feature-icon">📐</span>
+                      <div>
+                        <div className="feature-label">Surface</div>
+                        <div className="feature-value">{annonce.surface} m²</div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="feature-item">
-                    <span className="feature-icon">🛏️</span>
-                    <div>
-                      <div className="feature-label">Chambres</div>
-                      <div className="feature-value">{annonce.nbChambres}</div>
+                  )}
+                  {(annonce.nbChambres || annonce.nb_chambres) && (
+                    <div className="feature-item">
+                      <span className="feature-icon">🛏️</span>
+                      <div>
+                        <div className="feature-label">Chambres</div>
+                        <div className="feature-value">{annonce.nbChambres || annonce.nb_chambres}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="feature-item">
                     <span className="feature-icon">🏷️</span>
                     <div>
@@ -265,7 +422,10 @@ function AnnonceDetail() {
                     />
                     <div>
                       <div className="proprietaire-nom">
-                        {annonce.proprietaire?.nom}
+                        {annonce.proprietaire?.nomComplet || 
+                         `${annonce.proprietaire?.prenom || ''} ${annonce.proprietaire?.nom || ''}`.trim() || 
+                         annonce.proprietaire?.email || 
+                         'Propriétaire'}
                         {annonce.proprietaire?.verifie && (
                           <span className="verifie-badge" title="Propriétaire vérifié">✓</span>
                         )}
@@ -281,12 +441,21 @@ function AnnonceDetail() {
                 </div>
 
                 <div className="contact-card__actions">
-                  <Link
-                    to={`/message/${annonce.id}`}
-                    className="btn-contact"
-                  >
-                    💬 Envoyer un message privé
-                  </Link>
+                  {isAuthenticated() ? (
+                    <button
+                      className="btn-contact"
+                      onClick={() => setShowChatModal(true)}
+                    >
+                      💬 Envoyer un message privé
+                    </button>
+                  ) : (
+                    <Link
+                      to="/login"
+                      className="btn-contact"
+                    >
+                      🔐 Se connecter pour contacter
+                    </Link>
+                  )}
                   <button
                     className="btn-message"
                     onClick={() => setShowContactModal(true)}
@@ -295,16 +464,24 @@ function AnnonceDetail() {
                   </button>
                 </div>
 
-                {annonce.proprietaire?.telephone && (
-                  <div className="contact-info">
+                <div className="contact-info">
+                  {annonce.proprietaire?.telephone && (
                     <div className="contact-item">
                       <span className="contact-icon">📞</span>
                       <a href={`tel:${annonce.proprietaire.telephone}`}>
                         {annonce.proprietaire.telephone}
                       </a>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {annonce.proprietaire?.email && (
+                    <div className="contact-item">
+                      <span className="contact-icon">✉️</span>
+                      <a href={`mailto:${annonce.proprietaire.email}`}>
+                        {annonce.proprietaire.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
             </aside>
           </div>
@@ -350,6 +527,15 @@ function AnnonceDetail() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Chat Modal */}
+      {showChatModal && annonce && (
+        <ChatModal
+          annonce={annonce}
+          isOpen={showChatModal}
+          onClose={() => setShowChatModal(false)}
+        />
       )}
 
       <Footer />

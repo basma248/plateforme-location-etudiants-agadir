@@ -87,7 +87,7 @@
   gap: 16px;
 }
 
-.conversation-proprietaire {
+.conversation-user {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -95,7 +95,7 @@
   min-width: 0;
 }
 
-.proprietaire-avatar-small {
+.user-avatar-small {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -103,7 +103,7 @@
   flex-shrink: 0;
 }
 
-.conversation-proprietaire h3 {
+.conversation-user h3 {
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 4px;

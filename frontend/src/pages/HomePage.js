@@ -5,13 +5,16 @@ import Footer from '../components/Footer';
 import CardAnnonce from '../components/CardAnnonce';
 import AdvancedFilters from '../components/AdvancedFilters';
 import { getAnnonces } from '../services/annonceService';
+import { getCurrentUser, isAuthenticated } from '../services/authService';
 import './HomePage.css';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [annonces, setAnnonces] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [user, setUser] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [filters, setFilters] = useState({
     type: '',
     zone: '',
@@ -22,6 +25,71 @@ export default function HomePage() {
     meuble: '',
     disponibilite: ''
   });
+
+  // Vérifier l'utilisateur connecté
+  useEffect(() => {
+    if (isAuthenticated()) {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+      setShowWelcome(true);
+      // Masquer le message après 5 secondes
+      setTimeout(() => setShowWelcome(false), 5000);
+    }
+  }, []);
+
+  // Images du carrousel - haute qualité depuis Unsplash
+  const heroImages = [
+    {
+      url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1920&q=80',
+      title: 'Chambres modernes',
+      subtitle: 'Confort et style pour étudiants'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1920&q=80',
+      title: 'Studios indépendants',
+      subtitle: 'Votre espace personnel'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1920&q=80',
+      title: 'Appartements spacieux',
+      subtitle: 'Parfait pour la colocation'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&q=80',
+      title: 'Vue sur la mer',
+      subtitle: 'Logements avec vue exceptionnelle'
+    }
+  ];
+
+  // Statistiques attractives
+  const stats = [
+    { number: '500+', label: 'Annonces actives', icon: '🏠' },
+    { number: '1200+', label: 'Étudiants satisfaits', icon: '👥' },
+    { number: '98%', label: 'Taux de satisfaction', icon: '⭐' },
+    { number: '24/7', label: 'Support disponible', icon: '💬' }
+  ];
+
+  // Témoignages
+  const testimonials = [
+    {
+      name: 'Ahmed B.',
+      role: 'Étudiant',
+      text: 'J\'ai trouvé mon logement en 2 jours ! Plateforme très intuitive.',
+      avatar: '👨‍🎓'
+    },
+    {
+      name: 'Fatima A.',
+      role: 'Étudiante',
+      text: 'Service excellent, les propriétaires sont vérifiés. Je recommande !',
+      avatar: '👩‍🎓'
+    },
+    {
+      name: 'Youssef M.',
+      role: 'Étudiant',
+      text: 'La meilleure plateforme pour trouver un logement étudiant à Agadir.',
+      avatar: '👨‍💼'
+    }
+  ];
 
   // Données d'exemple si l'API n'est pas disponible
   const exampleAnnonces = [
@@ -34,7 +102,7 @@ export default function HomePage() {
       surface: 15,
       nbChambres: 1,
       meuble: true,
-      description: 'Chambre spacieuse et lumineuse dans un appartement partagé. Proche de toutes les commodités et des transports.',
+      description: 'Chambre spacieuse et lumineuse dans un appartement partagé.',
       images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800'],
       rating: 4.8
     },
@@ -47,7 +115,7 @@ export default function HomePage() {
       surface: 25,
       nbChambres: 1,
       meuble: true,
-      description: 'Studio entièrement meublé avec cuisine équipée et salle de bain privée. Idéal pour étudiant.',
+      description: 'Studio entièrement meublé avec cuisine équipée.',
       images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800'],
       rating: 4.9
     },
@@ -60,7 +128,7 @@ export default function HomePage() {
       surface: 60,
       nbChambres: 2,
       meuble: false,
-      description: 'Bel appartement au 2ème étage avec balcon. Parfait pour colocation.',
+      description: 'Bel appartement au 2ème étage avec balcon.',
       images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800'],
       rating: 4.7
     },
@@ -73,7 +141,7 @@ export default function HomePage() {
       surface: 20,
       nbChambres: 1,
       meuble: true,
-      description: 'Chambre dans colocation sympa avec 2 autres étudiants. Ambiance conviviale garantie !',
+      description: 'Chambre dans colocation sympa avec 2 autres étudiants.',
       images: ['https://images.unsplash.com/photo-1556912172-45b7abe8b7e8?w=800'],
       rating: 4.6
     },
@@ -86,7 +154,7 @@ export default function HomePage() {
       surface: 30,
       nbChambres: 1,
       meuble: true,
-      description: 'Studio récent avec terrasse privée. Vue sur la mer. Parking disponible.',
+      description: 'Studio récent avec terrasse privée. Vue sur la mer.',
       images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'],
       rating: 5.0
     },
@@ -99,22 +167,58 @@ export default function HomePage() {
       surface: 18,
       nbChambres: 1,
       meuble: true,
-      description: 'Chambre dans une belle villa avec jardin. Accès internet haut débit inclus.',
+      description: 'Chambre dans une belle villa avec jardin.',
       images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800'],
       rating: 4.5
     }
   ];
 
+  // Carrousel automatique
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const loadAnnonces = async () => {
       setLoading(true);
       try {
+        console.log('Chargement des annonces avec filtres:', filters);
         const data = await getAnnonces(filters);
-        setAnnonces(data);
+        console.log('Données reçues (HomePage):', data);
+        
+        if (data && Array.isArray(data)) {
+          console.log('Annonces chargées:', data.length, 'annonces');
+          // Vérifier que chaque annonce a un ID
+          data.forEach((annonce, index) => {
+            if (!annonce.id) {
+              console.warn(`Annonce à l'index ${index} n'a pas d'ID:`, annonce);
+            }
+            console.log(`Annonce ${index}: ID=${annonce.id}, Titre=${annonce.titre}, Images=${annonce.images?.length || 0}, All_images=${annonce.all_images?.length || 0}`);
+            if (annonce.images && annonce.images.length > 0) {
+              console.log(`  Images URLs:`, annonce.images);
+            }
+          });
+          setAnnonces(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          console.log('Annonces chargées (data.data):', data.data.length, 'annonces');
+          setAnnonces(data.data);
+        } else if (data && typeof data === 'object') {
+          const annoncesArray = data.data || data.items || data.results || [];
+          console.log('Annonces chargées (objet):', annoncesArray.length, 'annonces');
+          setAnnonces(Array.isArray(annoncesArray) ? annoncesArray : []);
+        } else {
+          console.warn('Aucune annonce trouvée ou format inattendu');
+          setAnnonces([]);
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des annonces:', error);
-        // En cas d'erreur, utiliser les données d'exemple
-        setAnnonces(exampleAnnonces);
+        console.error('Détails de l\'erreur:', error.message);
+        console.error('Stack:', error.stack);
+        // NE PAS utiliser les données d'exemple - laisser un tableau vide
+        setAnnonces([]);
       } finally {
         setLoading(false);
       }
@@ -138,49 +242,100 @@ export default function HomePage() {
       meuble: '',
       disponibilite: ''
     });
-    setSearchQuery('');
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    // La recherche est gérée par le filtrage en temps réel
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
   };
 
-  // Filtrer les annonces
-  const filteredAnnonces = annonces.filter(annonce => {
-    // Recherche par texte
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        annonce.titre?.toLowerCase().includes(query) ||
-        annonce.description?.toLowerCase().includes(query) ||
-        annonce.zone?.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+  };
 
-    // Filtres
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+  };
+
+  // Filtrer les annonces (filtres simples côté client pour la page d'accueil)
+  const filteredAnnonces = Array.isArray(annonces) ? annonces.filter(annonce => {
+    // Vérifier que l'annonce a les propriétés nécessaires
+    if (!annonce || !annonce.id) return false;
+    
     if (filters.type && annonce.type !== filters.type) return false;
     if (filters.zone && !annonce.zone?.toLowerCase().includes(filters.zone.toLowerCase())) return false;
     if (filters.prixMin && annonce.prix < parseInt(filters.prixMin)) return false;
     if (filters.prixMax && annonce.prix > parseInt(filters.prixMax)) return false;
-    if (filters.surfaceMin && annonce.surface < parseInt(filters.surfaceMin)) return false;
-    if (filters.nbChambres && annonce.nbChambres !== parseInt(filters.nbChambres)) return false;
-    if (filters.meuble !== '' && annonce.meuble !== (filters.meuble === 'true')) return false;
+    if (filters.surfaceMin && annonce.surface && annonce.surface < parseInt(filters.surfaceMin)) return false;
+    // Gérer à la fois nbChambres (camelCase) et nb_chambres (snake_case)
+    const nbChambres = annonce.nbChambres ?? annonce.nb_chambres;
+    if (filters.nbChambres && nbChambres !== parseInt(filters.nbChambres)) return false;
+    if (filters.meuble !== '' && filters.meuble !== null && annonce.meuble !== (filters.meuble === 'true')) return false;
 
     return true;
-  });
+  }) : [];
 
   return (
     <div className="homepage-wrapper">
       <Navbar />
       
-    <main className="homepage">
-        {/* Hero Section */}
-        <section className="hero-section">
-          <div className="hero-background">
-            <div className="hero-overlay"></div>
+      {/* Message de bienvenue */}
+      {showWelcome && user && (
+        <div className="welcome-message">
+          <div className="welcome-content">
+            <span className="welcome-icon">👋</span>
+            <span className="welcome-text">
+              Bonjour <strong>{user.prenom || user.nom || 'Bienvenue'}</strong> ! Content de vous revoir.
+            </span>
+            <button className="welcome-close" onClick={() => setShowWelcome(false)}>×</button>
           </div>
-          <div className="container hero-content">
+        </div>
+      )}
+
+      <main className="homepage">
+        {/* Hero Section avec Carrousel */}
+        <section className="hero-section">
+          <div className="hero-carousel">
+            {heroImages.map((image, index) => (
+              <div
+                key={index}
+                className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
+                style={{ backgroundImage: `url(${image.url})` }}
+              >
+                <div className="hero-slide-overlay"></div>
+                <div className="hero-slide-content">
+                  <h2 className="hero-slide-title">{image.title}</h2>
+                  <p className="hero-slide-subtitle">{image.subtitle}</p>
+                </div>
+              </div>
+            ))}
+            
+            {/* Contrôles du carrousel */}
+            <button className="carousel-btn carousel-btn-prev" onClick={prevSlide} aria-label="Image précédente">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+            </button>
+            <button className="carousel-btn carousel-btn-next" onClick={nextSlide} aria-label="Image suivante">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+
+            {/* Indicateurs */}
+            <div className="carousel-indicators">
+              {heroImages.map((_, index) => (
+                <button
+                  key={index}
+                  className={`indicator ${index === currentSlide ? 'active' : ''}`}
+                  onClick={() => goToSlide(index)}
+                  aria-label={`Aller à l'image ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="hero-content">
             <div className="hero-text">
               <h1 className="hero-title">
                 Trouvez votre logement étudiant à Agadir
@@ -189,46 +344,58 @@ export default function HomePage() {
                 Des centaines d'annonces vérifiées. Chambres, studios, appartements et colocations.
                 Trouvez votre chez-vous en quelques clics.
               </p>
-          </div>
+            </div>
 
-            {/* Barre de recherche principale */}
-            <div className="search-bar-hero">
-              <form onSubmit={handleSearch} className="search-form">
-                <div className="search-input-wrapper">
-                  <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-              <input
-                type="text"
-                    className="search-input"
-                    placeholder="Rechercher par zone, type de logement..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <button type="submit" className="search-button">
-                Rechercher
-              </button>
-            </form>
+            {/* Call to Action */}
+            <div className="hero-cta">
+              <p className="hero-cta-text">
+                Découvrez des centaines de logements adaptés aux étudiants à Agadir
+              </p>
+              <div className="hero-cta-buttons">
+                <Link to="/logements" className="cta-button cta-primary">
+                  🔍 Voir tous les logements
+                </Link>
+                {isAuthenticated() && (
+                  <Link to="/ajouter-annonce" className="cta-button cta-secondary">
+                    ➕ Publier une annonce
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* Section Statistiques */}
+        <section className="stats-section">
+          <div className="container">
+            <div className="stats-grid">
+              {stats.map((stat, index) => (
+                <div key={index} className="stat-card">
+                  <div className="stat-icon-wrapper">
+                    <div className="stat-icon">{stat.icon}</div>
+                  </div>
+                  <div className="stat-number">{stat.number}</div>
+                  <div className="stat-label">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* Filtres avancés */}
         <section className="filters-section">
-        <div className="container">
+          <div className="container">
             <AdvancedFilters
               filters={filters}
               onFilterChange={handleFilterChange}
               onReset={handleResetFilters}
             />
-        </div>
-      </section>
+          </div>
+        </section>
 
         {/* Résultats */}
         <section className="results-section">
-        <div className="container">
+          <div className="container">
             <div className="results-header">
               <h2 className="results-title">
                 {loading ? 'Chargement...' : `${filteredAnnonces.length} logement${filteredAnnonces.length > 1 ? 's' : ''} disponible${filteredAnnonces.length > 1 ? 's' : ''}`}
@@ -242,7 +409,7 @@ export default function HomePage() {
                     <option value="recent">Plus récent</option>
                     <option value="rating">Mieux notés</option>
                   </select>
-              </div>
+                </div>
               )}
             </div>
 
@@ -259,7 +426,7 @@ export default function HomePage() {
                 <button onClick={handleResetFilters} className="btn-reset">
                   Réinitialiser les filtres
                 </button>
-            </div>
+              </div>
             ) : (
               <div className="annonces-grid">
                 {filteredAnnonces.map(annonce => (
@@ -267,8 +434,30 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-        </div>
-      </section>
+          </div>
+        </section>
+
+        {/* Section Témoignages */}
+        <section className="testimonials-section">
+          <div className="container">
+            <h2 className="section-title">Ce que disent nos utilisateurs</h2>
+            <div className="testimonials-grid">
+              {testimonials.map((testimonial, index) => (
+                <div key={index} className="testimonial-card">
+                  <div className="testimonial-avatar">{testimonial.avatar}</div>
+                  <div className="testimonial-content">
+                    <p className="testimonial-text">"{testimonial.text}"</p>
+                    <div className="testimonial-author">
+                      <strong>{testimonial.name}</strong>
+                      <span>{testimonial.role}</span>
+                    </div>
+                  </div>
+                  <div className="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* Section catégories */}
         <section className="categories-section">
@@ -311,9 +500,9 @@ export default function HomePage() {
                 <h3>Colocations</h3>
                 <p>Trouvez vos futurs colocataires</p>
               </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
         {/* Section CTA */}
         <section className="cta-section">
@@ -321,13 +510,13 @@ export default function HomePage() {
             <div className="cta-text">
               <h2>Vous êtes propriétaire ?</h2>
               <p>Publiez votre annonce gratuitement et trouvez des locataires rapidement.</p>
-          </div>
+            </div>
             <Link to="/ajouter-annonce" className="cta-button">
               Publier une annonce
             </Link>
-        </div>
-      </section>
-    </main>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

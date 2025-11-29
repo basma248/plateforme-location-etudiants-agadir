@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from './services/authService';
+import { login, isAdmin } from './services/authService';
+import './LoginForm.css';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -16,7 +17,12 @@ export default function LoginForm() {
 
     try {
       await login(email, pwd);
-      navigate('/home');
+      // Rediriger vers /admin si l'utilisateur est admin, sinon vers /home
+      if (isAdmin()) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.message || 'Erreur de connexion');
     } finally {
@@ -25,24 +31,69 @@ export default function LoginForm() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 440, background: '#fff', padding: 28, borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
-        <h2 style={{ marginTop: 0 }}>Connexion</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-          {error && <div style={{ padding: '10px', background: '#ffebee', color: '#c62828', borderRadius: '8px', fontSize: '14px' }}>{error}</div>}
-          <input required placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-          <input required type="password" placeholder="Mot de passe" value={pwd} onChange={(e) => setPwd(e.target.value)} style={{ padding: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-          <button type="submit" disabled={loading} style={{ padding: 12, borderRadius: 8, border: 'none', background: loading ? '#ccc' : '#1D4E89', color: '#fff', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Connexion...' : 'Se connecter'}
+    <div className="login-page-wrapper">
+      <div className="login-container">
+        <div className="login-header">
+          <div className="login-logo">Darna Agadir</div>
+          <div className="login-subtitle">Connectez-vous à votre compte</div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          {error && (
+            <div className="login-error">
+              {error}
+            </div>
+          )}
+
+          <div className="login-input-group">
+            <span className="login-input-icon">📧</span>
+            <input
+              required
+              type="email"
+              placeholder="Adresse email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="login-input"
+            />
+          </div>
+
+          <div className="login-input-group">
+            <span className="login-input-icon">🔒</span>
+            <input
+              required
+              type="password"
+              placeholder="Mot de passe"
+              value={pwd}
+              onChange={(e) => setPwd(e.target.value)}
+              className="login-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="login-button"
+          >
+            {loading ? (
+              <span className="login-button-loading">
+                <span className="login-spinner"></span>
+                Connexion en cours...
+              </span>
+            ) : (
+              'Se connecter'
+            )}
           </button>
         </form>
 
-        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-          <Link to="/register">Créer un compte</Link>
-          <Link to="/forgot">Mot de passe oublié?</Link>
+        <div className="login-footer">
+          <Link to="/register" className="login-link">
+            Créer un compte
+          </Link>
+          <Link to="/forgot" className="login-link">
+            Mot de passe oublié ?
+          </Link>
         </div>
       </div>
     </div>
   );
 }
-// ...existing code...
