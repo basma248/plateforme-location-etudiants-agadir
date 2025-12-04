@@ -8,6 +8,34 @@ import { getAnnonceById } from '../services/annonceService';
 import { getToken, getCurrentUser } from '../services/authService';
 import './MessagesListPage.css';
 
+// Icônes SVG React
+const IconMessageCircle = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+  </svg>
+);
+
+const IconHome = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconMapPin = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+    <circle cx="12" cy="10" r="3"></circle>
+  </svg>
+);
+
+const IconDollarSign = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="1" x2="12" y2="23"></line>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+  </svg>
+);
+
 function MessagesListPage() {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
@@ -128,17 +156,23 @@ function MessagesListPage() {
       <main className="messages-list-page">
         <div className="container">
           <div className="page-header">
-            <h1>💬 Mes conversations</h1>
+            <h1>
+              <IconMessageCircle />
+              Mes conversations
+            </h1>
             <p>Toutes vos conversations avec les propriétaires et locataires</p>
           </div>
 
           {conversations.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">💬</div>
+              <div className="empty-icon-wrapper">
+                <IconMessageCircle />
+              </div>
               <h2>Aucune conversation</h2>
               <p>Vous n'avez pas encore de messages. Contactez un propriétaire pour commencer une conversation.</p>
               <button onClick={() => navigate('/home')} className="btn-primary">
-                Voir les annonces
+                <IconHome />
+                <span>Voir les annonces</span>
               </button>
             </div>
           ) : (
@@ -208,10 +242,16 @@ function MessagesListPage() {
                       
                       <div className="conversation-annonce-info">
                         {annonce.zone && (
-                          <span className="annonce-zone">📍 {annonce.zone}</span>
+                          <span className="annonce-zone">
+                            <IconMapPin />
+                            <span>{annonce.zone}</span>
+                          </span>
                         )}
                         {annonce.prix && (
-                          <span className="annonce-prix">{annonce.prix} MAD/mois</span>
+                          <span className="annonce-prix">
+                            <IconDollarSign />
+                            <span>{annonce.prix} MAD/mois</span>
+                          </span>
                         )}
                       </div>
                     </div>

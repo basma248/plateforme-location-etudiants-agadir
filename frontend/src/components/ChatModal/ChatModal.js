@@ -45,7 +45,7 @@ function ChatModal({ annonce, isOpen, onClose }) {
       setNewMessage('');
       setError(null);
     }
-  }, [isOpen, annonce?.id]);
+  }, [isOpen, annonce]);
 
   // Auto-scroll vers le bas quand de nouveaux messages arrivent
   useEffect(() => {

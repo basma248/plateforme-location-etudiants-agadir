@@ -221,4 +221,9 @@ class User extends Authenticatable
             ->withTimestamps()
             ->orderBy('annonce_views.created_at', 'desc');
     }
+
+    public function colocataires(): HasMany
+    {
+        return $this->hasMany(Colocataire::class);
+    }
 }

@@ -150,3 +150,5 @@ SHOW EVENTS;
 
 Ces informations permettront d'identifier exactement où le problème se produit.
 
+
+

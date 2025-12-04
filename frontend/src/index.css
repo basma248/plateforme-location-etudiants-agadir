@@ -15,6 +15,28 @@
   --visitor: #D9D3C7;
   --text: #222;
   --navbar-height: 72px;
+  
+  /* Gray scale */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Colors */
+  --white: #ffffff;
+  --violet-gradient: #667eea;
+  --violet-dark: #764ba2;
+  --violet-light: #a855f7;
+  --violet: #9333ea;
+  --blue-light: #60a5fa;
+  --blue: #3b82f6;
+  --success: #10b981;
 }
 
 html {

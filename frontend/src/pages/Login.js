@@ -1,6 +1,33 @@
-// ...existing code...
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Icônes SVG React
+const IconHome = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconKey = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+  </svg>
+);
+
+const IconEdit = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
+
+const IconEye = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
 
 export default function Login() {
   const navigate = useNavigate();
@@ -92,7 +119,12 @@ export default function Login() {
     <div style={styles.page}>
       <header style={styles.header} aria-hidden>
         <div style={styles.logo}>Darna Agadir</div>
-        <div style={styles.subtitle}>Bienvenue sur la plateforme logement étudiant à Agadir 🏠</div>
+        <div style={styles.subtitle}>
+          Bienvenue sur la plateforme logement étudiant à Agadir{' '}
+          <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: '4px' }}>
+            <IconHome />
+          </span>
+        </div>
       </header>
 
       <main style={styles.card} role="main" aria-labelledby="access-title">
@@ -109,7 +141,7 @@ export default function Login() {
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
             aria-label="Se connecter"
           >
-            <span style={styles.btnIcon}>🔑</span>
+            <span style={styles.btnIcon}><IconKey /></span>
             Se connecter
           </button>
 
@@ -121,7 +153,7 @@ export default function Login() {
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
             aria-label="Créer un compte étudiant"
           >
-            <span style={styles.btnIcon}>📝</span>
+            <span style={styles.btnIcon}><IconEdit /></span>
             Créer un compte étudiant
           </button>
 
@@ -133,7 +165,7 @@ export default function Login() {
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
             aria-label="Continuer sans compte"
           >
-            <span style={styles.btnIcon}>👀</span>
+            <span style={styles.btnIcon}><IconEye /></span>
             Continuer sans compte
           </button>
 

@@ -90,3 +90,5 @@ if ($viewedAnnonces->count() > 0) {
     echo "⚠️ Les annonces ne sont pas récupérées correctement\n";
 }
 
+
+

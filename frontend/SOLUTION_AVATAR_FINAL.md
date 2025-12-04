@@ -121,3 +121,5 @@ Si le problème persiste après avoir redémarré le serveur React, le problème
 2. **Le backend ne reçoit toujours pas le fichier** : Vérifier les logs Laravel pour voir si `$_FILES` est vide
 3. **Le proxy intercepte toujours la requête** : Vérifier dans la console du navigateur que l'URL utilisée est bien `http://localhost:8000/api/users/me` et non `/api/users/me`
 
+
+

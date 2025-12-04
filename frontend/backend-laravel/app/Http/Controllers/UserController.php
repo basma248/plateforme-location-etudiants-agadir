@@ -20,108 +20,153 @@ class UserController extends Controller
     /**
      * Formate l'URL de l'avatar pour garantir qu'elle est absolue
      */
+    /**
+     * Helper pour convertir une valeur en chaîne de manière sécurisée
+     */
+    private function safeString($value, $default = null)
+    {
+        if (is_null($value)) {
+            return $default;
+        }
+        if (is_string($value)) {
+            return trim($value) ?: $default;
+        }
+        if (is_array($value)) {
+            return !empty($value) ? (string)reset($value) : $default;
+        }
+        if (is_object($value)) {
+            return null; // Ne pas convertir les objets
+        }
+        $str = (string)$value;
+        return ($str && $str !== 'Array') ? $str : $default;
+    }
+    
+    /**
+     * Helper pour logger de manière sécurisée (évite les erreurs de conversion)
+     */
+    private function safeLog($message, $value = null)
+    {
+        // S'assurer que $message est une chaîne
+        $messageStr = is_string($message) ? $message : (is_array($message) ? json_encode($message) : (string)$message);
+        
+        if ($value === null) {
+            \Log::info($messageStr);
+            return;
+        }
+        
+        // S'assurer que $value est converti en chaîne de manière sécurisée
+        $valueStr = is_string($value) ? $value : json_encode($value);
+        
+        // Utiliser sprintf pour éviter les problèmes de concaténation
+        \Log::info(sprintf('%s: %s', $messageStr, $valueStr));
+    }
+    
     private function formatAvatarUrl($avatar)
     {
         try {
-            if (!$avatar) {
-                return null;
-            }
-            
-            // Si c'est un tableau, prendre le premier élément ou retourner null
-            if (is_array($avatar)) {
-                \Log::warning('formatAvatarUrl a reçu un tableau au lieu d\'une chaîne: ' . json_encode($avatar));
-                $avatar = !empty($avatar) ? reset($avatar) : null;
-                if (!$avatar) {
-                    return null;
-                }
-            }
-            
-            // S'assurer que c'est une chaîne
-            if (!is_string($avatar)) {
-                \Log::warning('formatAvatarUrl a reçu un type non-string: ' . gettype($avatar));
+            // Convertir en chaîne de manière sécurisée
+            $avatarStr = $this->safeString($avatar);
+            if (!$avatarStr) {
                 return null;
             }
             
             // Si c'est déjà une URL absolue (http:// ou https://), la retourner telle quelle
-            if (str_starts_with($avatar, 'http://') || str_starts_with($avatar, 'https://')) {
-                return $avatar;
+            // $avatarStr est déjà une chaîne après safeString(), pas besoin de le refaire
+            if (!$avatarStr) {
+                return null;
+            }
+            
+            // S'assurer que c'est bien une chaîne (double vérification)
+            if (!is_string($avatarStr)) {
+                \Log::error('ERREUR: $avatarStr n\'est pas une chaîne après safeString()! Type: ' . gettype($avatarStr));
+                return null;
+            }
+            
+            if (str_starts_with($avatarStr, 'http://') || str_starts_with($avatarStr, 'https://')) {
+                return $avatarStr;
             }
             
             // Si c'est un chemin qui commence par /storage/, le nettoyer
-            if (str_starts_with($avatar, '/storage/')) {
-                $relativePath = str_replace('/storage/', '', $avatar);
+            if (str_starts_with($avatarStr, '/storage/')) {
+                $relativePath = str_replace('/storage/', '', $avatarStr);
             } else {
                 // Sinon, c'est probablement un chemin relatif (avatars/filename.jpg)
-                $relativePath = $avatar;
+                $relativePath = $avatarStr;
             }
             
             // S'assurer que $relativePath est une chaîne
             if (!is_string($relativePath)) {
-                \Log::error('$relativePath n\'est pas une chaîne: ' . gettype($relativePath) . ' - Valeur: ' . json_encode($relativePath));
-                if (is_array($relativePath)) {
-                    $relativePath = !empty($relativePath) ? (string)reset($relativePath) : null;
-                } else {
-                    $relativePath = (string)$relativePath;
-                }
-                if (!$relativePath) {
-                    return null;
-                }
+                \Log::error('ERREUR: $relativePath n\'est pas une chaîne! Type: ' . gettype($relativePath));
+                return null;
+            }
+            
+            // S'assurer que $relativePath est une chaîne valide
+            $relativePath = $this->safeString($relativePath);
+            if (!$relativePath) {
+                \Log::error('$relativePath est vide après conversion');
+                return null;
             }
             
             // Utiliser Storage::url() pour générer l'URL complète
             $url = Storage::disk('public')->url($relativePath);
             
             // S'assurer que $url est une chaîne
-            if (!is_string($url)) {
-                \Log::error('Storage::url() a retourné un type non-string: ' . gettype($url) . ' - Valeur: ' . json_encode($url));
+            $url = $this->safeString($url);
+            if (!$url) {
                 // Fallback: construire l'URL manuellement
                 $baseUrl = request()->getSchemeAndHttpHost();
-                $relativePathStr = is_string($relativePath) ? $relativePath : (is_array($relativePath) ? reset($relativePath) : (string)$relativePath);
-                $url = $baseUrl . '/storage/' . ltrim($relativePathStr, '/');
-                \Log::info('URL construite manuellement (fallback): ' . $url);
+                $relativePathStr = $this->safeString($relativePath, '');
+                if ($relativePathStr) {
+                    $url = sprintf('%s/storage/%s', $baseUrl, ltrim($relativePathStr, '/'));
+                } else {
+                    $url = null;
+                }
+                $this->safeLog('URL construite manuellement (fallback)', $url);
             } else {
-                \Log::info('Storage::url() retourné: ' . $url);
+                $this->safeLog('Storage::url() retourné', $url);
             }
             
-            // S'assurer que $url est une chaîne avant de faire des opérations de chaîne
-            if (!is_string($url)) {
-                \Log::error('$url n\'est pas une chaîne après Storage::url(): ' . gettype($url));
-                $url = (string)$url;
+            if (!$url) {
+                return null;
             }
             
             // Si Storage::url() retourne une URL relative, la convertir en absolue
-            if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+            $urlStr = $this->safeString($url, '');
+            if ($urlStr && !str_starts_with($urlStr, 'http://') && !str_starts_with($urlStr, 'https://')) {
                 $baseUrl = request()->getSchemeAndHttpHost();
                 // S'assurer que l'URL commence par /storage/
-                if (!str_starts_with($url, '/storage/')) {
-                    $url = '/storage/' . ltrim($url, '/');
+                if (!str_starts_with($urlStr, '/storage/')) {
+                    $urlStr = sprintf('/storage/%s', ltrim($urlStr, '/'));
                 }
-                $url = $baseUrl . '/' . ltrim($url, '/');
-                \Log::info('URL convertie en absolue: ' . $url);
-            } else {
-                // Si c'est déjà une URL absolue mais ne contient pas /storage/, l'ajouter si nécessaire
-                $relativePathStr = is_string($relativePath) ? $relativePath : (is_array($relativePath) ? reset($relativePath) : (string)$relativePath);
-                if (is_string($relativePathStr) && !str_contains($url, '/storage/') && str_contains($url, $relativePathStr)) {
-                    // Remplacer le chemin relatif par /storage/ + chemin relatif
-                    $url = str_replace($relativePathStr, '/storage/' . $relativePathStr, $url);
-                    \Log::info('URL corrigée avec /storage/: ' . $url);
-                }
+                $urlStr = sprintf('%s/%s', $baseUrl, ltrim($urlStr, '/'));
+                $url = $urlStr;
+                $this->safeLog('URL convertie en absolue', $url);
             }
             
             // Vérifier que le fichier existe
-            $fileExists = Storage::disk('public')->exists($relativePath);
-            $relativePathStr = is_string($relativePath) ? $relativePath : json_encode($relativePath);
-            \Log::info('Fichier existe sur disque: ' . ($fileExists ? 'OUI' : 'NON') . ' - Chemin: ' . $relativePathStr);
+            $relativePathStr = $this->safeString($relativePath, '');
+            $fileExists = $relativePathStr ? Storage::disk('public')->exists($relativePathStr) : false;
+            $logFileExists = ($fileExists ? 'OUI' : 'NON');
+            if ($relativePathStr) {
+                $relativePathStrSafe = $this->safeString($relativePathStr, '');
+                $logFileExists = sprintf('%s - Chemin: %s', $logFileExists, $relativePathStrSafe);
+            }
+            $this->safeLog('Fichier existe sur disque', $logFileExists);
             
-            if (!$fileExists) {
-                \Log::warning('⚠️ Le fichier avatar n\'existe pas sur le disque: ' . $relativePath);
+            if (!$fileExists && $relativePathStr) {
+                $this->safeLog('⚠️ Le fichier avatar n\'existe pas sur le disque', $relativePathStr);
             }
             
-            \Log::info('Avatar formaté final: ' . (is_string($avatar) ? $avatar : json_encode($avatar)) . ' -> ' . $url);
-            return $url;
+            $finalUrl = $this->safeString($url, '');
+            $avatarStrSafe = $this->safeString($avatarStr, '');
+            $finalUrlSafe = $this->safeString($finalUrl, '');
+            $finalLog = sprintf('%s -> %s', $avatarStrSafe, $finalUrlSafe);
+            $this->safeLog('Avatar formaté final', $finalLog);
+            return $finalUrl ?: null;
         } catch (\Exception $e) {
-            \Log::error('Erreur dans formatAvatarUrl: ' . $e->getMessage());
-            \Log::error('Avatar original: ' . (is_array($avatar) ? json_encode($avatar) : ($avatar ?? 'NULL')));
+            $errorMsg = $this->safeString($e->getMessage(), 'Erreur inconnue');
+            $this->safeLog('Erreur dans formatAvatarUrl', $errorMsg);
+            $this->safeLog('Avatar original', $avatar);
             return null;
         }
     }
@@ -158,9 +203,9 @@ class UserController extends Controller
                 } else {
                     $annoncesCount = \App\Models\Annonce::where('user_id', $user->id)->count();
                 }
-                \Log::info('Nombre d\'annonces trouvées: ' . $annoncesCount);
+                $this->safeLog('Nombre d\'annonces trouvées', (int)$annoncesCount);
             } catch (\Exception $e) {
-                \Log::warning('Erreur lors du comptage des annonces: ' . $e->getMessage());
+                $this->safeLog('Erreur lors du comptage des annonces', $e->getMessage());
                 $annoncesCount = 0;
             }
             
@@ -172,15 +217,15 @@ class UserController extends Controller
                     // Fallback: utiliser UserFavorite directement
                     $favoritesCount = \App\Models\UserFavorite::where('user_id', $user->id)->count();
                 }
-                \Log::info('Nombre de favoris trouvés: ' . $favoritesCount);
+                $this->safeLog('Nombre de favoris trouvés', (int)$favoritesCount);
             } catch (\Exception $e) {
-                \Log::warning('Erreur lors du comptage des favoris: ' . $e->getMessage());
+                $this->safeLog('Erreur lors du comptage des favoris', $e->getMessage());
                 // Fallback: essayer avec la relation favorites (HasMany vers UserFavorite)
                 try {
                     $favoritesCount = \App\Models\UserFavorite::where('user_id', $user->id)->count();
-                    \Log::info('Favoris comptés via UserFavorite: ' . $favoritesCount);
+                    $this->safeLog('Favoris comptés via UserFavorite', (int)$favoritesCount);
                 } catch (\Exception $e2) {
-                    \Log::warning('Erreur lors du comptage des favoris (fallback): ' . $e2->getMessage());
+                    $this->safeLog('Erreur lors du comptage des favoris (fallback)', $e2->getMessage());
                     $favoritesCount = 0;
                 }
             }
@@ -194,9 +239,9 @@ class UserController extends Controller
                     \Log::warning('La table annonce_views n\'existe pas');
                     $totalVues = 0;
                 }
-                \Log::info('Vues totales calculées (annonces consultées): ' . $totalVues . ' pour l\'utilisateur ID: ' . $user->id);
+                $this->safeLog('Vues totales calculées (annonces consultées)', sprintf('%d pour l\'utilisateur ID %d', (int)$totalVues, (int)$user->id));
             } catch (\Exception $e) {
-                \Log::warning('Erreur lors du calcul des vues: ' . $e->getMessage());
+                $this->safeLog('Erreur lors du calcul des vues', $e->getMessage());
                 $totalVues = 0;
             }
             
@@ -205,11 +250,11 @@ class UserController extends Controller
                 // Vérifier DIRECTEMENT dans la BD avec une requête SQL (plus fiable)
                 $avatarRawDirect = DB::table('users')->where('id', $user->id)->value('avatar');
                 \Log::info('=== RÉCUPÉRATION AVATAR (getProfile) ===');
-                \Log::info('Avatar depuis DB::table (direct): ' . ($avatarRawDirect ?? 'NULL'));
+                $this->safeLog('Avatar depuis DB::table (direct)', $avatarRawDirect ?? 'NULL');
                 
                 // Lire aussi avec Eloquent pour comparaison (sans refresh pour éviter les problèmes)
                 $avatarRawEloquent = $user->avatar ?? null;
-                \Log::info('Avatar depuis Eloquent (sans refresh): ' . ($avatarRawEloquent ?? 'NULL'));
+                $this->safeLog('Avatar depuis Eloquent (sans refresh)', $avatarRawEloquent ?? 'NULL');
                 
                 // Utiliser la valeur directe de la BD (plus fiable)
                 $avatarRaw = $avatarRawDirect ?? $avatarRawEloquent ?? null;
@@ -217,8 +262,8 @@ class UserController extends Controller
                 // Si l'avatar existe en BD mais pas dans le modèle, le mettre à jour
                 if ($avatarRawDirect && $avatarRawDirect !== $avatarRawEloquent) {
                     \Log::warning('⚠️ Incohérence détectée dans getProfile!');
-                    \Log::warning('DB direct: ' . $avatarRawDirect);
-                    \Log::warning('Eloquent: ' . ($avatarRawEloquent ?? 'NULL'));
+                    $this->safeLog('DB direct', $avatarRawDirect);
+                    $this->safeLog('Eloquent', $avatarRawEloquent ?? 'NULL');
                     // Mettre à jour le modèle
                     $user->avatar = $avatarRawDirect;
                 }
@@ -226,20 +271,20 @@ class UserController extends Controller
                 if ($avatarRaw) {
                     // Vérifier si c'est déjà une URL (ne devrait pas arriver si on sauvegarde correctement)
                     if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
-                        \Log::warning('Avatar est déjà une URL (ne devrait pas arriver): ' . $avatarRaw);
+                        $this->safeLog('Avatar est déjà une URL (ne devrait pas arriver)', $avatarRaw);
                         $avatarUrl = $avatarRaw;
                     } else {
                         // C'est un chemin relatif, le formater en URL
                         $avatarUrl = $this->formatAvatarUrl($avatarRaw);
-                        \Log::info('Avatar formaté depuis chemin relatif: ' . $avatarRaw . ' -> ' . ($avatarUrl ?? 'NULL'));
+                        $this->safeLog('Avatar formaté depuis chemin relatif', sprintf('%s -> %s', $this->safeString($avatarRaw, ''), $avatarUrl ?? 'NULL'));
                     }
                 } else {
-                    \Log::info('Aucun avatar dans la BD pour User ID: ' . $user->id);
+                    $this->safeLog('Aucun avatar dans la BD pour User ID', (int)$user->id);
                     $avatarUrl = null;
                 }
             } catch (\Exception $e) {
-                \Log::error('Erreur lors du formatage de l\'avatar: ' . $e->getMessage());
-                \Log::error('Stack trace: ' . $e->getTraceAsString());
+                $this->safeLog('Erreur lors du formatage de l\'avatar', $e->getMessage());
+                $this->safeLog('Stack trace', $e->getTraceAsString());
                 $avatarUrl = null;
             }
             
@@ -264,11 +309,11 @@ class UserController extends Controller
             ];
             
             \Log::info('=== PROFIL RÉCUPÉRÉ AVEC SUCCÈS ===');
-            \Log::info('User ID: ' . $user->id);
-            \Log::info('Avatar: ' . ($avatarUrl ?? 'NULL'));
-            \Log::info('Annonces: ' . $annoncesCount);
-            \Log::info('Favoris: ' . $favoritesCount);
-            \Log::info('Vues: ' . $totalVues);
+            $this->safeLog('User ID', (int)$user->id);
+            $this->safeLog('Avatar', $avatarUrl ?? 'NULL');
+            $this->safeLog('Annonces', (int)$annoncesCount);
+            $this->safeLog('Favoris', (int)$favoritesCount);
+            $this->safeLog('Vues', (int)$totalVues);
             
             return response()->json([
                 'success' => true,
@@ -276,9 +321,9 @@ class UserController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('=== ERREUR DANS getProfile ===');
-            \Log::error('Message: ' . $e->getMessage());
-            \Log::error('Fichier: ' . $e->getFile() . ':' . $e->getLine());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            $this->safeLog('Message', $e->getMessage());
+            $this->safeLog('Fichier', sprintf('%s:%d', $e->getFile(), $e->getLine()));
+            $this->safeLog('Stack trace', $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
@@ -307,11 +352,20 @@ class UserController extends Controller
         
         // Vérifier $_FILES DIRECTEMENT (avant Laravel)
         \Log::info('=== VÉRIFICATION $_FILES DIRECTE ===');
-        \Log::info('$_FILES existe: ' . (isset($_FILES) ? 'OUI' : 'NON'));
+        $filesExists = isset($_FILES) ? 'OUI' : 'NON';
+        $this->safeLog('$_FILES existe', $filesExists);
         if (isset($_FILES)) {
-            \Log::info('Clés $_FILES: ' . implode(', ', array_keys($_FILES)));
+            $filesKeys = array_keys($_FILES);
+            $filesKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $filesKeys));
+            $this->safeLog('Clés $_FILES', $filesKeysStr);
             foreach ($_FILES as $key => $file) {
-                \Log::info("$_FILES[$key]: name=" . ($file['name'] ?? 'NULL') . ', size=' . ($file['size'] ?? 'NULL') . ', error=' . ($file['error'] ?? 'NULL') . ', type=' . ($file['type'] ?? 'NULL'));
+                $name = (is_array($file) && isset($file['name'])) ? (string)$file['name'] : 'NULL';
+                $size = (is_array($file) && isset($file['size'])) ? (string)$file['size'] : 'NULL';
+                $error = (is_array($file) && isset($file['error'])) ? (string)$file['error'] : 'NULL';
+                $type = (is_array($file) && isset($file['type'])) ? (string)$file['type'] : 'NULL';
+                $keyStr = $this->safeString($key, 'unknown');
+                $logMsg = sprintf('$_FILES[%s]: name=%s, size=%s, error=%s, type=%s', $keyStr, $name, $size, $error, $type);
+                \Log::info($logMsg);
             }
         } else {
             \Log::warning('$_FILES n\'existe PAS du tout!');
@@ -319,23 +373,38 @@ class UserController extends Controller
         
         // Vérifier le body brut (pour debug)
         $rawBody = $request->getContent();
-        \Log::info('Raw body length: ' . strlen($rawBody));
-        \Log::info('Raw body preview (first 500 chars): ' . substr($rawBody, 0, 500));
+        $rawBodyLen = strlen($rawBody);
+        $this->safeLog('Raw body length', (string)$rawBodyLen);
+        $rawBodyPreview = substr($rawBody, 0, 500);
+        $this->safeLog('Raw body preview (first 500 chars)', $rawBodyPreview);
         
-        \Log::info('hasFile(avatar): ' . ($request->hasFile('avatar') ? 'OUI' : 'NON'));
-        \Log::info('has(avatar): ' . ($request->has('avatar') ? 'OUI' : 'NON'));
-        \Log::info('All request data keys: ' . implode(', ', array_keys($request->all())));
-        \Log::info('All files in request: ' . implode(', ', array_keys($request->allFiles())));
-        \Log::info('Request input keys: ' . implode(', ', array_keys($request->input())));
+        $hasFile = $request->hasFile('avatar') ? 'OUI' : 'NON';
+        $this->safeLog('hasFile(avatar)', $hasFile);
+        $hasAvatar = $request->has('avatar') ? 'OUI' : 'NON';
+        $this->safeLog('has(avatar)', $hasAvatar);
+        $allKeys = array_keys($request->all());
+        $allKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $allKeys));
+        $this->safeLog('All request data keys', $allKeysStr);
+        $allFilesKeys = array_keys($request->allFiles());
+        $allFilesKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $allFilesKeys));
+        $this->safeLog('All files in request', $allFilesKeysStr);
+        $inputKeys = array_keys($request->input());
+        $inputKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $inputKeys));
+        $this->safeLog('Request input keys', $inputKeysStr);
         
         // Vérifier si le fichier est dans $_FILES
         if (isset($_FILES['avatar'])) {
             \Log::info('✅ $_FILES[avatar] existe!');
-            \Log::info('$_FILES[avatar] error: ' . ($_FILES['avatar']['error'] ?? 'NULL'));
-            \Log::info('$_FILES[avatar] size: ' . ($_FILES['avatar']['size'] ?? 'NULL'));
-            \Log::info('$_FILES[avatar] name: ' . ($_FILES['avatar']['name'] ?? 'NULL'));
-            \Log::info('$_FILES[avatar] tmp_name: ' . ($_FILES['avatar']['tmp_name'] ?? 'NULL'));
-            \Log::info('$_FILES[avatar] type: ' . ($_FILES['avatar']['type'] ?? 'NULL'));
+            $avatarError = isset($_FILES['avatar']['error']) ? (string)$_FILES['avatar']['error'] : 'NULL';
+            $this->safeLog('$_FILES[avatar] error', $avatarError);
+            $avatarSize = isset($_FILES['avatar']['size']) ? (string)$_FILES['avatar']['size'] : 'NULL';
+            $this->safeLog('$_FILES[avatar] size', $avatarSize);
+            $avatarName = isset($_FILES['avatar']['name']) ? (string)$_FILES['avatar']['name'] : 'NULL';
+            $this->safeLog('$_FILES[avatar] name', $avatarName);
+            $avatarTmpName = isset($_FILES['avatar']['tmp_name']) ? (string)$_FILES['avatar']['tmp_name'] : 'NULL';
+            $this->safeLog('$_FILES[avatar] tmp_name', $avatarTmpName);
+            $avatarType = isset($_FILES['avatar']['type']) ? (string)$_FILES['avatar']['type'] : 'NULL';
+            $this->safeLog('$_FILES[avatar] type', $avatarType);
         } else {
             \Log::warning('❌ $_FILES[avatar] n\'existe PAS!');
         }
@@ -1087,8 +1156,9 @@ class UserController extends Controller
         $user = $request->user();
         
         \Log::info('=== Test Auth ===');
-        \Log::info('Token présent: ' . ($token ? 'oui' : 'non'));
-        \Log::info('User via $request->user(): ' . ($user ? 'User ID ' . $user->id : 'null'));
+        $this->safeLog('Token présent', $token ? 'oui' : 'non');
+        $userInfo = $user ? sprintf('User ID %d', (int)$user->id) : 'null';
+        $this->safeLog('User via $request->user()', $userInfo);
         
         // Essayer de trouver le token manuellement
         $manualUser = null;
@@ -1097,10 +1167,10 @@ class UserController extends Controller
                 $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
                 if ($accessToken && $accessToken->tokenable) {
                     $manualUser = $accessToken->tokenable;
-                    \Log::info('User via token manuel: User ID ' . $manualUser->id);
+                    $this->safeLog('User via token manuel', sprintf('User ID %d', (int)$manualUser->id));
                 }
             } catch (\Exception $e) {
-                \Log::error('Erreur: ' . $e->getMessage());
+                $this->safeLog('Erreur', $e->getMessage());
             }
         }
         
@@ -1122,30 +1192,53 @@ class UserController extends Controller
      */
     public function uploadAvatar(Request $request)
     {
+        // Activer le rapport d'erreurs pour capturer toutes les erreurs
+        error_reporting(E_ALL);
+        ini_set('display_errors', 0); // Ne pas afficher, juste logger
+        ini_set('log_errors', 1);
+        
+        // Handler personnalisé pour capturer "Array to string conversion"
+        set_error_handler(function($errno, $errstr, $errfile, $errline) {
+            if (strpos($errstr, 'Array to string conversion') !== false) {
+                \Log::error(sprintf('ERREUR CAPTURÉE: %s dans %s ligne %d', $errstr, $errfile, $errline));
+                \Log::error('Stack trace: ' . json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10)));
+            }
+            return false; // Laisser le handler par défaut gérer
+        });
+        
         \Log::info('=== DÉBUT uploadAvatar (POST) ===');
-        \Log::info('User ID: ' . ($request->user() ? $request->user()->id : 'NULL'));
-        \Log::info('Method: ' . $request->method());
-        \Log::info('Content-Type: ' . ($request->header('Content-Type') ?? 'NULL'));
-        \Log::info('Content-Length: ' . ($request->header('Content-Length') ?? 'NULL'));
+        $userId = $request->user() ? (int)$request->user()->id : null;
+        $this->safeLog('User ID', $userId);
+        $this->safeLog('Method', $request->method());
+        $this->safeLog('Content-Type', $request->header('Content-Type'));
+        $this->safeLog('Content-Length', $request->header('Content-Length'));
         
         $user = $request->user();
         
         // Vérifier $_FILES DIRECTEMENT
         \Log::info('=== VÉRIFICATION $_FILES DIRECTE ===');
-        \Log::info('$_FILES existe: ' . (isset($_FILES) ? 'OUI' : 'NON'));
+        $filesExists = isset($_FILES) ? 'OUI' : 'NON';
+        $this->safeLog('$_FILES existe', $filesExists);
         if (isset($_FILES)) {
-            \Log::info('Clés $_FILES: ' . implode(', ', array_keys($_FILES)));
+            $filesKeys = array_keys($_FILES);
+            $filesKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $filesKeys));
+            $this->safeLog('Clés $_FILES', $filesKeysStr);
             foreach ($_FILES as $key => $file) {
                 $name = (is_array($file) && isset($file['name'])) ? (string)$file['name'] : 'NULL';
                 $size = (is_array($file) && isset($file['size'])) ? (string)$file['size'] : 'NULL';
                 $error = (is_array($file) && isset($file['error'])) ? (string)$file['error'] : 'NULL';
                 $type = (is_array($file) && isset($file['type'])) ? (string)$file['type'] : 'NULL';
-                \Log::info("$_FILES[$key]: name=" . $name . ', size=' . $size . ', error=' . $error . ', type=' . $type);
+                $keyStr = $this->safeString($key, 'unknown');
+                $logMsg = sprintf('$_FILES[%s]: name=%s, size=%s, error=%s, type=%s', $keyStr, $name, $size, $error, $type);
+                \Log::info($logMsg);
             }
         }
         
-        \Log::info('hasFile(avatar): ' . ($request->hasFile('avatar') ? 'OUI' : 'NON'));
-        \Log::info('All files in request: ' . implode(', ', array_keys($request->allFiles())));
+        $hasFile = $request->hasFile('avatar') ? 'OUI' : 'NON';
+        $this->safeLog('hasFile(avatar)', $hasFile);
+        $allFilesKeys = array_keys($request->allFiles());
+        $allFilesKeysStr = implode(', ', array_map(function($k) { return (string)$k; }, $allFilesKeys));
+        $this->safeLog('All files in request', $allFilesKeysStr);
         
         if (!$request->hasFile('avatar')) {
             \Log::warning('❌ Aucun fichier avatar reçu');
@@ -1158,7 +1251,12 @@ class UserController extends Controller
         try {
             $file = $request->file('avatar');
             \Log::info('✅ Fichier avatar détecté, début de l\'upload...');
-            \Log::info('Fichier reçu - Nom: ' . $file->getClientOriginalName() . ', Taille: ' . $file->getSize() . ' bytes');
+            $fileName = $this->safeString($file->getClientOriginalName(), 'unknown');
+            $fileSizeNum = $file->getSize();
+            $fileSize = is_numeric($fileSizeNum) ? (string)$fileSizeNum : '0';
+            $this->safeLog('Fichier reçu - Nom', $fileName);
+            $fileSizeWithUnit = $this->safeString($fileSize, '0') . ' bytes';
+            $this->safeLog('Fichier reçu - Taille', $fileSizeWithUnit);
             
             if (!$file->isValid()) {
                 \Log::error('Fichier invalide');
@@ -1170,8 +1268,9 @@ class UserController extends Controller
             
             // Vérifier que c'est bien une image
             $mimeType = $file->getMimeType();
-            if (!str_starts_with($mimeType, 'image/')) {
-                \Log::error('Type MIME invalide: ' . $mimeType);
+            $mimeTypeStr = $this->safeString($mimeType, '');
+            if (!$mimeTypeStr || !str_starts_with($mimeTypeStr, 'image/')) {
+                $this->safeLog('Type MIME invalide', $mimeTypeStr);
                 return response()->json([
                     'success' => false,
                     'message' => 'Le fichier doit être une image'
@@ -1181,10 +1280,10 @@ class UserController extends Controller
             // Supprimer l'ancien avatar s'il existe
             if ($user->avatar) {
                 try {
-                    $oldAvatarPath = $user->avatar;
-                    if (Storage::disk('public')->exists($oldAvatarPath)) {
+                    $oldAvatarPath = $this->safeString($user->avatar, '');
+                    if ($oldAvatarPath && Storage::disk('public')->exists($oldAvatarPath)) {
                         Storage::disk('public')->delete($oldAvatarPath);
-                        \Log::info('✅ Ancien avatar supprimé: ' . $oldAvatarPath);
+                        $this->safeLog('✅ Ancien avatar supprimé', $oldAvatarPath);
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Erreur lors de la suppression de l\'ancien avatar: ' . $e->getMessage());
@@ -1192,73 +1291,135 @@ class UserController extends Controller
             }
             
             // Générer un nom de fichier unique
-            $extension = $file->getClientOriginalExtension();
-            $filename = 'avatar_' . $user->id . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $extension = $this->safeString($file->getClientOriginalExtension(), 'jpg');
+            $userId = (int)$user->id;
+            $timestamp = time();
+            $uniqueId = uniqid();
+            $filename = sprintf('avatar_%d_%d_%s.%s', $userId, $timestamp, $uniqueId, $extension);
             
             // Stocker le fichier
             $relativePath = $file->storeAs('avatars', $filename, 'public');
             \Log::info('=== AVATAR UPLOADÉ ===');
-            \Log::info('Relative Path: ' . $relativePath);
+            
+            // S'assurer que $relativePath est une chaîne (storeAs() devrait retourner une chaîne, mais vérifions)
+            $relativePathStr = $this->safeString($relativePath, '');
+            if (!$relativePathStr) {
+                \Log::error('ERREUR: storeAs() a retourné une valeur invalide: ' . json_encode($relativePath));
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors du stockage du fichier'
+                ], 500);
+            }
+            
+            $this->safeLog('Relative Path', $relativePathStr);
             
             // Sauvegarder le chemin dans la base de données
             $directUpdate = DB::table('users')->where('id', $user->id)->update([
-                'avatar' => $relativePath,
+                'avatar' => $relativePathStr,
                 'updated_at' => now()
             ]);
-            \Log::info('DB::table()->update() retourné: ' . $directUpdate);
+            $this->safeLog('DB::table()->update() retourné', $directUpdate);
             
             // Vérifier immédiatement
             $avatarFromDB = DB::table('users')->where('id', $user->id)->value('avatar');
-            \Log::info('Avatar dans BD (après update): ' . ($avatarFromDB ?? 'NULL'));
+            $this->safeLog('Avatar dans BD (après update)', $avatarFromDB);
             
-            if ($avatarFromDB !== $relativePath) {
+            // S'assurer que $avatarFromDB est une chaîne
+            $avatarFromDBStr = $this->safeString($avatarFromDB, '');
+            
+            if ($avatarFromDBStr !== $relativePathStr) {
                 \Log::warning('Avatar non sauvegardé correctement, nouvelle tentative...');
                 // Nouvelle tentative avec SQL brut
                 DB::statement('UPDATE users SET avatar = ?, updated_at = ? WHERE id = ?', [
-                    $relativePath,
+                    $relativePathStr,
                     now(),
                     $user->id
                 ]);
                 $avatarFromDB = DB::table('users')->where('id', $user->id)->value('avatar');
-                \Log::info('Avatar dans BD (après SQL brut): ' . ($avatarFromDB ?? 'NULL'));
+                $avatarFromDBStr = $this->safeString($avatarFromDB, '');
+                $this->safeLog('Avatar dans BD (après SQL brut)', $avatarFromDBStr);
             }
             
-            // Formater l'URL
-            $avatarUrl = $this->formatAvatarUrl($relativePath);
-            \Log::info('Avatar URL formatée: ' . ($avatarUrl ?? 'NULL'));
+            // Formater l'URL de manière sécurisée
+            $avatarUrl = $this->formatAvatarUrl($relativePathStr);
             
-            // S'assurer que $avatarUrl est une chaîne ou null
-            if ($avatarUrl !== null && !is_string($avatarUrl)) {
-                \Log::error('Erreur: formatAvatarUrl a retourné un type non-string: ' . gettype($avatarUrl));
-                \Log::error('Valeur retournée: ' . json_encode($avatarUrl));
-                $avatarUrl = null;
+            // S'assurer que $avatarUrl est une chaîne ou null (pas un tableau)
+            $avatarUrlFinal = null;
+            if ($avatarUrl !== null) {
+                if (is_string($avatarUrl)) {
+                    $avatarUrlFinal = $avatarUrl;
+                } elseif (is_array($avatarUrl)) {
+                    \Log::error('ERREUR CRITIQUE: $avatarUrl est un tableau! Valeur: ' . json_encode($avatarUrl));
+                    $avatarUrlFinal = !empty($avatarUrl) ? (string)reset($avatarUrl) : null;
+                } else {
+                    $avatarUrlFinal = (string)$avatarUrl;
+                }
             }
             
             // Recharger l'utilisateur depuis la BD pour avoir les données les plus récentes
             $user->refresh();
             
-            // Construire la réponse avec des types garantis
+            // Vérification finale avant la réponse
+            if ($avatarUrlFinal !== null && !is_string($avatarUrlFinal)) {
+                \Log::error('ERREUR FINALE: $avatarUrlFinal n\'est pas une chaîne avant la réponse JSON! Type: ' . gettype($avatarUrlFinal) . ' - Valeur: ' . json_encode($avatarUrlFinal));
+                $avatarUrlFinal = null;
+            }
+            
+            // Construire la réponse avec des types garantis (tous primitifs)
+            $userId = (int)$user->id;
+            $avatarValue = $avatarUrlFinal; // null ou string, jamais array
+            
             $responseData = [
                 'success' => true,
                 'message' => 'Avatar uploadé avec succès',
                 'data' => [
-                    'id' => (int)$user->id,
-                    'avatar' => $avatarUrl ? (string)$avatarUrl : null
+                    'id' => $userId,
+                    'avatar' => $avatarValue
                 ]
             ];
             
-            \Log::info('Réponse JSON préparée: ' . json_encode($responseData));
+            $this->safeLog('Réponse JSON préparée', $responseData);
             
-            return response()->json($responseData);
+            // Utiliser json_encode manuellement pour plus de contrôle et éviter les erreurs
+            try {
+                $jsonResponse = json_encode($responseData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if ($jsonResponse === false) {
+                    \Log::error('Erreur json_encode: ' . json_last_error_msg());
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Erreur lors de la préparation de la réponse'
+                    ], 500);
+                }
+                return response($jsonResponse, 200)->header('Content-Type', 'application/json');
+            } catch (\Exception $e) {
+                \Log::error('Erreur lors de la création de la réponse JSON: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la création de la réponse'
+                ], 500);
+            }
             
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de l\'upload de l\'avatar: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            $errorMsg = $this->safeString($e->getMessage(), 'Erreur inconnue');
+            $this->safeLog('Erreur lors de l\'upload de l\'avatar', $errorMsg);
+            $this->safeLog('Stack trace', $e->getTraceAsString());
+            $this->safeLog('Fichier', $e->getFile() . ':' . $e->getLine());
+            
+            // Vérifier si c'est une erreur "Array to string conversion"
+            if (strpos($errorMsg, 'Array to string') !== false || strpos($e->getMessage(), 'Array to string') !== false) {
+                \Log::error('⚠️⚠️⚠️ ERREUR "Array to string conversion" DÉTECTÉE! ⚠️⚠️⚠️');
+                \Log::error('Fichier: ' . $e->getFile());
+                \Log::error('Ligne: ' . $e->getLine());
+                \Log::error('Message: ' . $e->getMessage());
+            }
             
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'upload de l\'avatar: ' . $e->getMessage()
+                'message' => 'Erreur lors de l\'upload de l\'avatar: ' . $errorMsg
             ], 500);
+        } finally {
+            // Restaurer le handler d'erreur par défaut
+            restore_error_handler();
         }
     }
 

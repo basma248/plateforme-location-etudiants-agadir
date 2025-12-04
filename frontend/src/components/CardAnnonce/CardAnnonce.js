@@ -1,10 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toggleFavorite } from '../../services/annonceService';
 import { getToken, isAuthenticated } from '../../services/authService';
 import './CardAnnonce.css';
 
+// Icônes SVG React
+const IconLocation = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+    <circle cx="12" cy="10" r="3"></circle>
+  </svg>
+);
+
+const IconRuler = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21.3 8.7l-5.6-5.6c-.4-.4-1-.4-1.4 0L2.7 15.3c-.4.4-.4 1 0 1.4l5.6 5.6c.4.4 1 .4 1.4 0L21.3 10c.4-.3.4-1 0-1.3z"></path>
+    <line x1="14.5" y1="9.5" x2="19.5" y2="14.5"></line>
+  </svg>
+);
+
+const IconBed = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M2 4v16"></path>
+    <path d="M2 8h18a2 2 0 0 1 2 2v10"></path>
+    <path d="M2 12h18"></path>
+    <path d="M6 8V4"></path>
+    <path d="M6 12v4"></path>
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
+
+const IconHeart = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+
+const IconHome = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <polyline points="15 18 9 12 15 6"></polyline>
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+);
+
 function CardAnnonce({ annonce }) {
+  const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
@@ -227,14 +284,14 @@ function CardAnnonce({ annonce }) {
                   onClick={prevImage}
                   aria-label="Image précédente"
                 >
-                  ‹
+                  <IconChevronLeft />
                 </button>
                 <button
                   className="card-annonce__nav-btn card-annonce__nav-next"
                   onClick={nextImage}
                   aria-label="Image suivante"
                 >
-                  ›
+                  <IconChevronRight />
                 </button>
                 <div className="card-annonce__image-counter">
                   {currentImageIndex + 1} / {images.length}
@@ -254,7 +311,7 @@ function CardAnnonce({ annonce }) {
           </>
         ) : (
           <div className="card-annonce__image-placeholder">
-            <span className="card-annonce__placeholder-icon">🏠</span>
+            <IconHome />
           </div>
         )}
         <button
@@ -262,16 +319,7 @@ function CardAnnonce({ annonce }) {
           onClick={handleFavorite}
           aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill={isFavorite ? '#FF385C' : 'none'}
-            stroke={isFavorite ? '#FF385C' : 'currentColor'}
-            strokeWidth="2"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
+          <IconHeart />
         </button>
         {annonce.type && (
           <div className="card-annonce__badge">
@@ -296,7 +344,8 @@ function CardAnnonce({ annonce }) {
         </div>
 
         <p className="card-annonce__location">
-          📍 {annonce.zone || annonce.ville || 'Agadir'}
+          <IconLocation />
+          {annonce.zone || annonce.ville || 'Agadir'}
         </p>
 
         {annonce.description && (
@@ -310,17 +359,20 @@ function CardAnnonce({ annonce }) {
         <div className="card-annonce__features">
           {annonce.surface && (
             <span className="card-annonce__feature">
-              📐 {annonce.surface}m²
+              <IconRuler />
+              {annonce.surface}m²
             </span>
           )}
           {(annonce.nbChambres || annonce.nb_chambres) && (
             <span className="card-annonce__feature">
-              🛏️ {annonce.nbChambres || annonce.nb_chambres} chambre{(annonce.nbChambres || annonce.nb_chambres) > 1 ? 's' : ''}
+              <IconBed />
+              {annonce.nbChambres || annonce.nb_chambres} chambre{(annonce.nbChambres || annonce.nb_chambres) > 1 ? 's' : ''}
             </span>
           )}
           {annonce.meuble && (
             <span className="card-annonce__feature">
-              ✓ Meublé
+              <IconCheck />
+              Meublé
             </span>
           )}
         </div>
@@ -337,7 +389,8 @@ function CardAnnonce({ annonce }) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Navigation vers la page de contact sera gérée par le parent
+              // Rediriger vers la page de détail de l'annonce où l'utilisateur pourra ouvrir le chat
+              navigate(`/annonce/${annonce.id}`);
             }}
           >
             Contacter

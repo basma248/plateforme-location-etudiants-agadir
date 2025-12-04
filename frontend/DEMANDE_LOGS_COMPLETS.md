@@ -60,3 +60,5 @@ Avatar dans BD (vérification finale): NULL
 
 Les logs doivent montrer **TOUT** le processus depuis `=== DÉBUT updateProfile ===` jusqu'à `=== RÉPONSE FINALE ===`.
 
+
+

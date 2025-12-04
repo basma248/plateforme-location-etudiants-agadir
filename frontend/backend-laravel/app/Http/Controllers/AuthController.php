@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\PasswordResetToken;
+use App\Mail\ResetPasswordMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -140,18 +145,60 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            // Pour des raisons de sécurité, on ne révèle pas si l'email existe ou non
             return response()->json([
-                'success' => false,
-                'message' => 'Email invalide ou non trouvé',
-                'errors' => $validator->errors()
-            ], 422);
+                'success' => true,
+                'message' => 'Si cet email existe dans notre système, un lien de réinitialisation vous sera envoyé.'
+            ]);
         }
 
-        // TODO: Implémenter l'envoi d'email de réinitialisation
-        // Pour l'instant, on retourne juste un message de succès
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            // Pour des raisons de sécurité, on retourne le même message
+            return response()->json([
+                'success' => true,
+                'message' => 'Si cet email existe dans notre système, un lien de réinitialisation vous sera envoyé.'
+            ]);
+        }
+
+        // Marquer tous les anciens tokens comme utilisés
+        PasswordResetToken::where('user_id', $user->id)
+            ->where('used', false)
+            ->update(['used' => true]);
+
+        // Générer un nouveau token unique
+        $token = Str::random(64);
+        
+        // Vérifier que le token est unique (très peu probable qu'il ne le soit pas, mais sécurité)
+        while (PasswordResetToken::where('token', $token)->exists()) {
+            $token = Str::random(64);
+        }
+
+        // Créer le token de réinitialisation (valide pendant 1 heure)
+        $passwordReset = PasswordResetToken::create([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => Carbon::now()->addHours(1),
+            'used' => false,
+        ]);
+
+        // Construire l'URL de réinitialisation
+        $frontendUrl = env('FRONTEND_URL', config('app.url'));
+        $resetUrl = $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+
+        // Envoyer l'email de réinitialisation
+        try {
+            Mail::to($user->email)->send(new ResetPasswordMail($token, $user->email, $resetUrl));
+        } catch (\Exception $e) {
+            // Logger l'erreur mais ne pas révéler à l'utilisateur
+            \Log::error('Erreur lors de l\'envoi de l\'email de réinitialisation: ' . $e->getMessage());
+            // On retourne quand même un message de succès pour des raisons de sécurité
+        }
+        
         return response()->json([
             'success' => true,
-            'message' => 'Un email de réinitialisation a été envoyé'
+            'message' => 'Si cet email existe dans notre système, un lien de réinitialisation vous sera envoyé.'
         ]);
     }
 
@@ -172,10 +219,56 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // TODO: Implémenter la vérification du token et la réinitialisation
         $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email invalide'
+            ], 422);
+        }
+
+        // Récupérer le token de réinitialisation
+        $passwordReset = PasswordResetToken::byToken($request->token)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$passwordReset) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token de réinitialisation invalide'
+            ], 422);
+        }
+
+        // Vérifier si le token est valide (non utilisé et non expiré)
+        if (!$passwordReset->isValid()) {
+            if ($passwordReset->used) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ce token de réinitialisation a déjà été utilisé'
+                ], 422);
+            }
+
+            if ($passwordReset->expires_at->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ce token de réinitialisation a expiré. Veuillez en demander un nouveau.'
+                ], 422);
+            }
+        }
+
+        // Mettre à jour le mot de passe
         $user->mot_de_passe = Hash::make($request->password);
         $user->save();
+
+        // Marquer le token comme utilisé
+        $passwordReset->markAsUsed();
+
+        // Supprimer tous les autres tokens non utilisés pour cet utilisateur (sécurité)
+        PasswordResetToken::where('user_id', $user->id)
+            ->where('used', false)
+            ->where('id', '!=', $passwordReset->id)
+            ->update(['used' => true]);
 
         return response()->json([
             'success' => true,

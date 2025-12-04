@@ -6,8 +6,62 @@ import CardAnnonce from '../components/CardAnnonce';
 import { getAnnonces } from '../services/annonceService';
 import './LogementsPage.css';
 
+// Icônes SVG React
+const IconHome = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconList = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="8" y1="6" x2="21" y2="6"></line>
+    <line x1="8" y1="12" x2="21" y2="12"></line>
+    <line x1="8" y1="18" x2="21" y2="18"></line>
+    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+
+const IconSearch = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="11" cy="11" r="8"></circle>
+    <path d="m21 21-4.35-4.35"></path>
+  </svg>
+);
+
+const IconRefresh = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  </svg>
+);
+
+const IconChevronDown = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+);
+
+const IconChevronUp = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="18 15 12 9 6 15"></polyline>
+  </svg>
+);
+
 function LogementsPage() {
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState('annonces'); // 'annonces' ou 'ajouter'
   const [annonces, setAnnonces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(true);
@@ -49,7 +103,13 @@ function LogementsPage() {
       const apiFilters = {};
       
       if (filters.search) apiFilters.search = filters.search;
-      if (filters.type) apiFilters.type = filters.type;
+      // Exclure les annonces de type "colocation" de la page logements
+      // Si l'utilisateur a sélectionné "colocation", on l'ignore
+      if (filters.type && filters.type !== 'colocation') {
+        apiFilters.type = filters.type;
+      }
+      // Exclure explicitement les annonces de colocation
+      apiFilters.exclude_type = 'colocation';
       if (filters.zone) apiFilters.zone = filters.zone;
       if (filters.prixMin) apiFilters.prix_min = filters.prixMin;
       if (filters.prixMax) apiFilters.prix_max = filters.prixMax;
@@ -68,7 +128,9 @@ function LogementsPage() {
       }
 
       const data = await getAnnonces(apiFilters);
-      setAnnonces(Array.isArray(data) ? data : []);
+      // Filtrer aussi côté client pour être sûr d'exclure les colocations
+      const filteredData = Array.isArray(data) ? data.filter(annonce => annonce.type !== 'colocation') : [];
+      setAnnonces(filteredData);
     } catch (error) {
       console.error('Erreur lors du chargement des annonces:', error);
       setAnnonces([]);
@@ -134,15 +196,48 @@ function LogementsPage() {
         <div className="logements-container">
           {/* Header */}
           <div className="logements-header">
-            <h1>🏠 Tous les logements disponibles</h1>
+            <h1>
+              <IconHome />
+              Trouvez ou proposez un logement à Agadir
+            </h1>
             <p>Trouvez le logement parfait qui correspond à vos besoins</p>
           </div>
 
-          {/* Barre de recherche principale */}
-          <div className="search-bar-container">
+          {/* Navigation principale - Onglets */}
+          <div className="section-tabs-wrapper">
+            <div className="section-tabs">
+              <button
+                className={`section-tab ${activeSection === 'annonces' ? 'active' : ''}`}
+                onClick={() => setActiveSection('annonces')}
+                aria-label="Voir les annonces"
+              >
+                <IconList />
+                Voir les annonces
+              </button>
+              <button
+                className={`section-tab ${activeSection === 'ajouter' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveSection('ajouter');
+                  navigate('/ajouter-annonce');
+                }}
+                aria-label="Ajouter une annonce"
+              >
+                <IconPlus />
+                Ajouter une annonce
+              </button>
+            </div>
+          </div>
+
+          {/* Section Annonces */}
+          {activeSection === 'annonces' && (
+            <>
+              {/* Barre de recherche principale */}
+              <div className="search-bar-container">
             <form onSubmit={handleSearch} className="main-search-form">
               <div className="search-input-wrapper">
-                <span className="search-icon">🔍</span>
+                <span className="search-icon">
+                  <IconSearch />
+                </span>
                 <input
                   type="text"
                   placeholder="Rechercher par titre, description ou zone..."
@@ -157,6 +252,7 @@ function LogementsPage() {
                   }}
                 />
                 <button type="submit" className="search-button">
+                  <IconSearch />
                   Rechercher
                 </button>
               </div>
@@ -165,7 +261,8 @@ function LogementsPage() {
               className="toggle-filters-btn"
               onClick={() => setShowFilters(!showFilters)}
             >
-              {showFilters ? '▲' : '▼'} Filtres avancés
+              {showFilters ? <IconChevronUp /> : <IconChevronDown />}
+              Filtres avancés
             </button>
           </div>
 
@@ -184,7 +281,7 @@ function LogementsPage() {
                     <option value="chambre">Chambre</option>
                     <option value="studio">Studio</option>
                     <option value="appartement">Appartement</option>
-                    <option value="colocation">Colocation</option>
+                    {/* Colocation exclue - voir page dédiée /colocation */}
                   </select>
                 </div>
 
@@ -311,49 +408,56 @@ function LogementsPage() {
                   className="btn-apply-filters"
                   onClick={loadAnnonces}
                 >
-                  🔍 Appliquer les filtres
+                  <IconSearch />
+                  Appliquer les filtres
                 </button>
                 <button
                   type="button"
                   className="btn-reset-filters"
                   onClick={handleResetFilters}
                 >
-                  🔄 Réinitialiser
+                  <IconRefresh />
+                  Réinitialiser
                 </button>
               </div>
             </div>
           )}
 
-          {/* Résultats */}
-          <div className="results-section">
-            <div className="results-header">
-              <h2>
-                {loading ? 'Chargement...' : `${annonces.length} logement${annonces.length > 1 ? 's' : ''} trouvé${annonces.length > 1 ? 's' : ''}`}
-              </h2>
-            </div>
+              {/* Résultats */}
+              <div className="results-section">
+                <div className="results-header">
+                  <h2>
+                    {loading ? 'Chargement...' : `${annonces.length} logement${annonces.length > 1 ? 's' : ''} trouvé${annonces.length > 1 ? 's' : ''}`}
+                  </h2>
+                </div>
 
-            {loading ? (
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Chargement des annonces...</p>
+                {loading ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Chargement des annonces...</p>
+                  </div>
+                ) : annonces.length === 0 ? (
+                  <div className="no-results">
+                    <div className="no-results-icon">
+                      <IconSearch />
+                    </div>
+                    <h3>Aucun logement trouvé</h3>
+                    <p>Essayez de modifier vos critères de recherche</p>
+                    <button className="btn-reset-filters" onClick={handleResetFilters}>
+                      <IconRefresh />
+                      Réinitialiser les filtres
+                    </button>
+                  </div>
+                ) : (
+                  <div className="annonces-grid">
+                    {annonces.map(annonce => (
+                      <CardAnnonce key={annonce.id} annonce={annonce} />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : annonces.length === 0 ? (
-              <div className="no-results">
-                <div className="no-results-icon">🔍</div>
-                <h3>Aucun logement trouvé</h3>
-                <p>Essayez de modifier vos critères de recherche</p>
-                <button className="btn-reset-filters" onClick={handleResetFilters}>
-                  Réinitialiser les filtres
-                </button>
-              </div>
-            ) : (
-              <div className="annonces-grid">
-                {annonces.map(annonce => (
-                  <CardAnnonce key={annonce.id} annonce={annonce} />
-                ))}
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </main>
       <Footer />

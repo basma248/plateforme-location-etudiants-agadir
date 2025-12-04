@@ -77,3 +77,5 @@ Cela affichera :
    ```
 3. Vérifier si le fichier existe dans `storage/app/public/avatars/`
 
+
+

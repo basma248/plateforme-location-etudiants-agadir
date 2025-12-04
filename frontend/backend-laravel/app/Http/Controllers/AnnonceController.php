@@ -23,7 +23,7 @@ class AnnonceController extends Controller
         $query = Annonce::approuvees()->with(['user', 'images', 'equipements', 'regles']);
 
         $filters = $request->only([
-            'type', 'zone', 'prix_min', 'prix_max', 'meuble',
+            'type', 'exclude_type', 'zone', 'prix_min', 'prix_max', 'meuble',
             'surface_min', 'nb_chambres', 'search', 'sort_by', 'sort_direction'
         ]);
 
@@ -150,7 +150,48 @@ class AnnonceController extends Controller
             $annonce->equipements_list = $equipementsList;
             $annonce->regles_list = $reglesList;
             $annonce->prix_formatted = $annonce->prix_formatted;
-            $annonce->proprietaire = $annonce->proprietaire;
+            
+            // Formater le propriétaire avec l'avatar correctement formaté
+            if ($annonce->user) {
+                // Récupérer l'avatar directement depuis la BD pour plus de fiabilité
+                $avatarRaw = $annonce->user->avatar ?? null;
+                if (!$avatarRaw) {
+                    $avatarRaw = DB::table('users')->where('id', $annonce->user->id)->value('avatar');
+                }
+                
+                // Formater l'avatar en URL absolue si nécessaire
+                $avatar = null;
+                if ($avatarRaw) {
+                    if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
+                        $avatar = $avatarRaw;
+                    } else {
+                        // Utiliser Storage::url() pour générer l'URL complète
+                        $url = Storage::disk('public')->url($avatarRaw);
+                        if ($url && !str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+                            $baseUrl = request()->getSchemeAndHttpHost();
+                            if (!str_starts_with($url, '/storage/')) {
+                                $url = sprintf('/storage/%s', ltrim($url, '/'));
+                            }
+                            $url = sprintf('%s%s', $baseUrl, $url);
+                        }
+                        $avatar = $url ?: null;
+                    }
+                }
+                
+                $annonce->proprietaire = [
+                    'id' => $annonce->user->id,
+                    'nom' => $annonce->user->nom ?? '',
+                    'prenom' => $annonce->user->prenom ?? '',
+                    'nomComplet' => trim(($annonce->user->prenom ?? '') . ' ' . ($annonce->user->nom ?? '')) ?: ($annonce->user->email ?? 'Propriétaire'),
+                    'email' => $annonce->user->email ?? '',
+                    'telephone' => $annonce->user->telephone ?? '',
+                    'avatar' => $avatar,
+                    'verifie' => $annonce->user->email_verifie ?? false,
+                ];
+            } else {
+                $annonce->proprietaire = null;
+            }
+            
             // Mapper les champs snake_case vers camelCase pour le frontend
             $annonce->nbChambres = $annonce->nb_chambres;
             $annonce->descriptionLongue = $annonce->description_longue;
@@ -192,24 +233,57 @@ class AnnonceController extends Controller
     public function store(Request $request)
     {
         // Préparer les règles de validation
+        // Règles de base
         $rules = [
             'titre' => 'required|string|max:255',
             'type' => 'required|in:' . implode(',', Annonce::TYPES),
-            'zone' => 'required|string|max:100',
-            'adresse' => 'nullable|string|max:500',
-            'prix' => 'required|numeric|min:0',
-            'surface' => 'nullable|numeric|min:0',
-            'nb_chambres' => 'nullable|integer|min:1',
+            'colocation_type' => 'nullable|in:logement_trouve,logement_recherche',
             'description' => 'required|string|max:2000',
             'description_longue' => 'nullable|string|max:5000',
-            'disponibilite' => 'nullable|string|max:50',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'nullable|string|max:2000', // Pour les URLs
-            'equipements' => 'nullable|array|max:20',
-            'equipements.*' => 'string|max:100',
+            'zone' => 'required|string|max:100',
+            'prix' => 'required|numeric|min:0',
             'regles' => 'nullable|array|max:20',
             'regles.*' => 'string|max:100',
         ];
+
+        // Règles conditionnelles selon le type de colocation
+        $colocationType = $request->colocation_type;
+        
+        if ($colocationType === 'logement_trouve') {
+            // Pour "J'ai trouvé un logement" - tous les champs du logement sont requis/optionnels
+            $rules['nb_colocataires_recherches'] = 'required|integer|min:1';
+            $rules['nb_colocataires_trouves'] = 'nullable|integer|min:0';
+            $rules['conditions_colocation'] = 'nullable|string|max:1000';
+            $rules['genre_recherche'] = 'required|in:homme,femme'; // Genre recherché pour les colocataires (obligatoire, seulement homme ou femme)
+            $rules['adresse'] = 'nullable|string|max:500';
+            $rules['surface'] = 'nullable|numeric|min:0';
+            $rules['nb_chambres'] = 'nullable|integer|min:1';
+            $rules['disponibilite'] = 'nullable|string|max:50';
+            $rules['images'] = 'nullable|array|max:10';
+            $rules['images.*'] = 'nullable|string|max:2000';
+            $rules['equipements'] = 'nullable|array|max:20';
+            $rules['equipements.*'] = 'string|max:100';
+        } elseif ($colocationType === 'logement_recherche') {
+            // Pour "Je cherche un logement" - pas de champs du logement
+            $rules['genre_recherche'] = 'required|in:homme,femme,mixte';
+            $rules['type_chambre_recherchee'] = 'required|in:chambre_seule,chambre_partagee,indifferent';
+            $rules['nb_personnes_souhaitees'] = 'nullable|integer|min:1';
+            $rules['cherche_seul'] = 'nullable|boolean';
+            // Zone et prix ne sont plus obligatoires pour "je cherche un logement"
+            $rules['zone'] = 'nullable|string|max:100';
+            $rules['prix'] = 'nullable|numeric|min:0';
+            // Pas d'images, adresse, surface, nb_chambres, meuble, disponibilite, equipements pour ce type
+        } else {
+            // Si pas de type de colocation spécifié, règles par défaut
+            $rules['adresse'] = 'nullable|string|max:500';
+            $rules['surface'] = 'nullable|numeric|min:0';
+            $rules['nb_chambres'] = 'nullable|integer|min:1';
+            $rules['disponibilite'] = 'nullable|string|max:50';
+            $rules['images'] = 'nullable|array|max:10';
+            $rules['images.*'] = 'nullable|string|max:2000';
+            $rules['equipements'] = 'nullable|array|max:20';
+            $rules['equipements.*'] = 'string|max:100';
+        }
         
         // Validation pour meuble (accepter booléen, string "1"/"0", etc.)
         $rules['meuble'] = ['nullable', function ($attribute, $value, $fail) {
@@ -247,21 +321,67 @@ class AnnonceController extends Controller
                 }
             }
             
-            $annonce = Annonce::create([
+            // Préparer les données selon le type de colocation
+            // S'assurer que zone et prix ne sont jamais null
+            $zone = $request->zone;
+            if (empty($zone) || $zone === null || $zone === '') {
+                $zone = 'Non spécifiée'; // Valeur par défaut si zone est vide
+            }
+            
+            $prix = $request->prix;
+            if (empty($prix) || $prix === null || $prix === '') {
+                $prix = 0; // Valeur par défaut si prix est vide
+            }
+            
+            $annonceData = [
                 'user_id' => $request->user()->id,
                 'titre' => $request->titre,
                 'type' => $request->type,
-                'zone' => $request->zone,
-                'adresse' => $request->adresse ?? null,
-                'prix' => $request->prix,
-                'surface' => $request->surface ?? null,
-                'nb_chambres' => $request->nb_chambres ?? 1,
+                'colocation_type' => $request->colocation_type ?? null,
+                'zone' => $zone,
+                'prix' => (float) $prix,
                 'description' => $request->description,
                 'description_longue' => $request->description_longue ?? null,
-                'meuble' => $meubleValue,
-                'disponibilite' => $request->disponibilite ?? null,
-                'statut' => 'approuve', // Approuver automatiquement pour l'instant
-            ]);
+                'statut' => 'approuve',
+            ];
+
+            // Champs spécifiques pour "J'ai trouvé un logement"
+            if ($request->colocation_type === 'logement_trouve') {
+                $annonceData['nb_colocataires_recherches'] = $request->nb_colocataires_recherches ?? null;
+                $annonceData['nb_colocataires_trouves'] = $request->nb_colocataires_trouves ?? 0;
+                $annonceData['conditions_colocation'] = $request->conditions_colocation ?? null;
+                $annonceData['genre_recherche'] = $request->genre_recherche ?? null; // Genre recherché pour les colocataires
+                $annonceData['adresse'] = $request->adresse ?? null;
+                $annonceData['surface'] = $request->surface ?? null;
+                $nbChambres = $request->nb_chambres;
+                $annonceData['nb_chambres'] = (!empty($nbChambres) && $nbChambres !== null && $nbChambres !== '') ? (int) $nbChambres : 1;
+                $annonceData['meuble'] = $meubleValue;
+                $annonceData['disponibilite'] = $request->disponibilite ?? null;
+            }
+            
+            // Champs spécifiques pour "Je cherche un logement"
+            if ($request->colocation_type === 'logement_recherche') {
+                $annonceData['genre_recherche'] = $request->genre_recherche ?? null;
+                $annonceData['type_chambre_recherchee'] = $request->type_chambre_recherchee ?? null;
+                $annonceData['nb_personnes_souhaitees'] = $request->nb_personnes_souhaitees ?? null;
+                $annonceData['cherche_seul'] = $request->cherche_seul ?? false;
+                // Pas de champs du logement pour ce type - utiliser des valeurs par défaut pour les champs obligatoires
+                $annonceData['adresse'] = null;
+                $annonceData['surface'] = null;
+                // Toujours définir nb_chambres à 1 pour "logement_recherche" car la colonne ne peut pas être null
+                $annonceData['nb_chambres'] = 1;
+                $annonceData['meuble'] = false;
+                $annonceData['disponibilite'] = null;
+            }
+            
+            // S'assurer que nb_chambres est toujours défini (fallback pour tous les cas)
+            if (!isset($annonceData['nb_chambres']) || $annonceData['nb_chambres'] === null || $annonceData['nb_chambres'] === '') {
+                $annonceData['nb_chambres'] = 1;
+            } else {
+                $annonceData['nb_chambres'] = (int) $annonceData['nb_chambres'];
+            }
+
+            $annonce = Annonce::create($annonceData);
         } catch (\Exception $e) {
             \Log::error('Erreur lors de la création de l\'annonce: ' . $e->getMessage());
             return response()->json([
@@ -271,11 +391,14 @@ class AnnonceController extends Controller
             ], 500);
         }
 
-        // Traiter les images uploadées (fichiers)
+        // Traiter les images uploadées (fichiers) - pour tous les types d'annonces sauf "Je cherche un logement"
         $uploadedImageUrls = [];
         
         // Vérifier si des fichiers sont présents (hasFile() peut échouer avec FormData)
-        if ($request->hasFile('image_files') || $request->has('image_files')) {
+        // Ne pas traiter les images seulement si c'est "Je cherche un logement"
+        $shouldProcessImages = $request->colocation_type !== 'logement_recherche';
+        
+        if ($shouldProcessImages && ($request->hasFile('image_files') || $request->has('image_files'))) {
             \Log::info('Traitement des fichiers images uploadés pour l\'annonce ID: ' . $annonce->id);
             
             try {
@@ -333,49 +456,55 @@ class AnnonceController extends Controller
                 \Log::error('Erreur lors de la récupération des fichiers: ' . $e->getMessage());
             }
         } else {
-            \Log::info('Aucun fichier image reçu dans image_files (hasFile et has retournent false)');
+            if (!$shouldProcessImages) {
+                \Log::info('Images non traitées (type: logement_recherche)');
+            } else {
+                \Log::info('Aucun fichier image reçu dans image_files (hasFile et has retournent false)');
+            }
         }
         
         \Log::info('Total d\'images uploadées: ' . count($uploadedImageUrls));
         
-        // Traiter les images par URL
-        $urlImages = [];
-        if ($request->has('images') && is_array($request->images) && !empty($request->images)) {
-            \Log::info('Traitement des URLs d\'images pour l\'annonce ID: ' . $annonce->id);
-            
-            // Filtrer seulement les URLs HTTP/HTTPS
-            $urlImages = array_filter($request->images, function($img) {
-                if (empty($img) || !is_string($img)) {
-                    return false;
-                }
-                return str_starts_with($img, 'http://') || str_starts_with($img, 'https://');
-            });
-            
-            \Log::info('URLs d\'images valides: ' . count($urlImages));
-        }
-        
-        // Combiner toutes les images (uploadées + URLs)
-        $allImages = array_merge($uploadedImageUrls, array_values($urlImages));
-        
-        if (!empty($allImages)) {
-            try {
-                $annonce->addImages($allImages);
-                \Log::info('Total d\'images ajoutées: ' . count($allImages) . ' (uploadées: ' . count($uploadedImageUrls) . ', URLs: ' . count($urlImages) . ')');
-                \Log::info('Total d\'images après ajout: ' . $annonce->images()->count());
-            } catch (\Exception $e) {
-                \Log::error('Erreur lors de l\'ajout des images: ' . $e->getMessage());
-                \Log::error('Stack trace: ' . $e->getTraceAsString());
+        // Traiter les images par URL - pour tous les types sauf "Je cherche un logement"
+        if ($shouldProcessImages) {
+            $urlImages = [];
+            if ($request->has('images') && is_array($request->images) && !empty($request->images)) {
+                \Log::info('Traitement des URLs d\'images pour l\'annonce ID: ' . $annonce->id);
+                
+                // Filtrer seulement les URLs HTTP/HTTPS
+                $urlImages = array_filter($request->images, function($img) {
+                    if (empty($img) || !is_string($img)) {
+                        return false;
+                    }
+                    return str_starts_with($img, 'http://') || str_starts_with($img, 'https://');
+                });
+                
+                \Log::info('URLs d\'images valides: ' . count($urlImages));
             }
-        } else {
-            \Log::warning('Aucune image valide à ajouter');
-        }
+            
+            // Combiner toutes les images (uploadées + URLs)
+            $allImages = array_merge($uploadedImageUrls, array_values($urlImages));
+            
+            if (!empty($allImages)) {
+                try {
+                    $annonce->addImages($allImages);
+                    \Log::info('Total d\'images ajoutées: ' . count($allImages) . ' (uploadées: ' . count($uploadedImageUrls) . ', URLs: ' . count($urlImages) . ')');
+                    \Log::info('Total d\'images après ajout: ' . $annonce->images()->count());
+                } catch (\Exception $e) {
+                    \Log::error('Erreur lors de l\'ajout des images: ' . $e->getMessage());
+                    \Log::error('Stack trace: ' . $e->getTraceAsString());
+                }
+            } else {
+                \Log::warning('Aucune image valide à ajouter');
+            }
 
-        // Ajouter les équipements
-        if ($request->has('equipements') && is_array($request->equipements) && !empty($request->equipements)) {
-            try {
-                $annonce->updateEquipements($request->equipements);
-            } catch (\Exception $e) {
-                \Log::error('Erreur lors de l\'ajout des équipements: ' . $e->getMessage());
+            // Ajouter les équipements - seulement pour "J'ai trouvé un logement"
+            if ($request->has('equipements') && is_array($request->equipements) && !empty($request->equipements)) {
+                try {
+                    $annonce->updateEquipements($request->equipements);
+                } catch (\Exception $e) {
+                    \Log::error('Erreur lors de l\'ajout des équipements: ' . $e->getMessage());
+                }
             }
         }
 
@@ -680,6 +809,31 @@ class AnnonceController extends Controller
 
             // Ajouter les informations du propriétaire (s'assurer que user existe)
             if ($annonce->user) {
+                // Récupérer l'avatar directement depuis la BD pour plus de fiabilité
+                $avatarRaw = $annonce->user->avatar ?? null;
+                if (!$avatarRaw) {
+                    $avatarRaw = DB::table('users')->where('id', $annonce->user->id)->value('avatar');
+                }
+                
+                // Formater l'avatar en URL absolue si nécessaire
+                $avatar = null;
+                if ($avatarRaw) {
+                    if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
+                        $avatar = $avatarRaw;
+                    } else {
+                        // Utiliser Storage::url() pour générer l'URL complète
+                        $url = Storage::disk('public')->url($avatarRaw);
+                        if ($url && !str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+                            $baseUrl = request()->getSchemeAndHttpHost();
+                            if (!str_starts_with($url, '/storage/')) {
+                                $url = sprintf('/storage/%s', ltrim($url, '/'));
+                            }
+                            $url = sprintf('%s%s', $baseUrl, $url);
+                        }
+                        $avatar = $url ?: null;
+                    }
+                }
+                
                 $annonce->proprietaire = [
                     'id' => $annonce->user->id,
                     'nom' => $annonce->user->nom ?? '',
@@ -687,7 +841,7 @@ class AnnonceController extends Controller
                     'nomComplet' => trim(($annonce->user->prenom ?? '') . ' ' . ($annonce->user->nom ?? '')) ?: ($annonce->user->email ?? 'Propriétaire'),
                     'email' => $annonce->user->email ?? '',
                     'telephone' => $annonce->user->telephone ?? '',
-                    'avatar' => $annonce->user->avatar ?? $annonce->user->profile_image ?? null,
+                    'avatar' => $avatar,
                     'verifie' => $annonce->user->email_verifie ?? false,
                 ];
             } else {
@@ -744,6 +898,31 @@ class AnnonceController extends Controller
             
             // Ajouter le propriétaire
             if ($annonce->user) {
+                // Récupérer l'avatar directement depuis la BD pour plus de fiabilité
+                $avatarRaw = $annonce->user->avatar ?? null;
+                if (!$avatarRaw) {
+                    $avatarRaw = DB::table('users')->where('id', $annonce->user->id)->value('avatar');
+                }
+                
+                // Formater l'avatar en URL absolue si nécessaire
+                $avatar = null;
+                if ($avatarRaw) {
+                    if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
+                        $avatar = $avatarRaw;
+                    } else {
+                        // Utiliser Storage::url() pour générer l'URL complète
+                        $url = Storage::disk('public')->url($avatarRaw);
+                        if ($url && !str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+                            $baseUrl = request()->getSchemeAndHttpHost();
+                            if (!str_starts_with($url, '/storage/')) {
+                                $url = sprintf('/storage/%s', ltrim($url, '/'));
+                            }
+                            $url = sprintf('%s%s', $baseUrl, $url);
+                        }
+                        $avatar = $url ?: null;
+                    }
+                }
+                
                 $responseData['proprietaire'] = [
                     'id' => $annonce->user->id,
                     'nom' => $annonce->user->nom ?? '',
@@ -751,7 +930,7 @@ class AnnonceController extends Controller
                     'nomComplet' => trim(($annonce->user->prenom ?? '') . ' ' . ($annonce->user->nom ?? '')) ?: ($annonce->user->email ?? 'Propriétaire'),
                     'email' => $annonce->user->email ?? '',
                     'telephone' => $annonce->user->telephone ?? '',
-                    'avatar' => $annonce->user->avatar ?? $annonce->user->profile_image ?? null,
+                    'avatar' => $avatar,
                     'verifie' => (bool) ($annonce->user->email_verifie ?? false),
                 ];
                 // Ajouter aussi user pour compatibilité
@@ -761,7 +940,7 @@ class AnnonceController extends Controller
                     'prenom' => $annonce->user->prenom ?? '',
                     'email' => $annonce->user->email ?? '',
                     'telephone' => $annonce->user->telephone ?? '',
-                    'avatar' => $annonce->user->avatar ?? $annonce->user->profile_image ?? null,
+                    'avatar' => $avatar,
                     'email_verifie' => (bool) ($annonce->user->email_verifie ?? false),
                 ];
             } else {

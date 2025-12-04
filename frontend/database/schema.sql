@@ -184,6 +184,27 @@ CREATE TABLE IF NOT EXISTS annonce_reports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- TABLE: contact_messages (Messages de contact pour l'admin)
+-- ============================================
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    telephone VARCHAR(20),
+    type ENUM('question', 'reclamation', 'contrainte', 'suggestion', 'annonce', 'technique', 'autre') NOT NULL,
+    sujet VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    lu BOOLEAN DEFAULT FALSE,
+    traite BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_lu (lu),
+    INDEX idx_traite (traite),
+    INDEX idx_type (type),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- TABLE: user_reports (Signalements d'utilisateurs)
 -- ============================================
 CREATE TABLE IF NOT EXISTS user_reports (

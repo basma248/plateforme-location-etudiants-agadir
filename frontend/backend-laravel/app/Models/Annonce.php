@@ -16,6 +16,14 @@ class Annonce extends Model
         'user_id',
         'titre',
         'type',
+        'colocation_type',
+        'nb_colocataires_recherches',
+        'nb_colocataires_trouves',
+        'conditions_colocation',
+        'genre_recherche',
+        'type_chambre_recherchee',
+        'nb_personnes_souhaitees',
+        'cherche_seul',
         'zone',
         'adresse',
         'prix',
@@ -41,6 +49,10 @@ class Annonce extends Model
         'vues' => 'integer',
         'contacts' => 'integer',
         'nb_chambres' => 'integer',
+        'nb_colocataires_recherches' => 'integer',
+        'nb_colocataires_trouves' => 'integer',
+        'nb_personnes_souhaitees' => 'integer',
+        'cherche_seul' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -132,6 +144,11 @@ class Annonce extends Model
             $query->where('type', $filters['type']);
         }
 
+        // Exclure un type spécifique (ex: exclure les colocations de la page logements)
+        if (isset($filters['exclude_type']) && $filters['exclude_type']) {
+            $query->where('type', '!=', $filters['exclude_type']);
+        }
+
         if (isset($filters['zone']) && $filters['zone']) {
             $query->where('zone', $filters['zone']);
         }
@@ -170,6 +187,10 @@ class Annonce extends Model
 
         if (isset($filters['user_id']) && $filters['user_id']) {
             $query->where('user_id', $filters['user_id']);
+        }
+
+        if (isset($filters['colocation_type']) && $filters['colocation_type']) {
+            $query->where('colocation_type', $filters['colocation_type']);
         }
 
         // Tri

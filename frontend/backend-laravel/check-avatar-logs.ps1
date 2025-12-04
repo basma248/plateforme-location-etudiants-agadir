@@ -33,3 +33,5 @@ if (Test-Path $logFile) {
     Write-Host "Le fichier de log n'existe pas: $logFile" -ForegroundColor Red
 }
 
+
+

@@ -118,3 +118,5 @@ SELECT id, email, avatar FROM users WHERE id = VOTRE_ID;
 
 Ces logs me diront **exactement** où le problème se produit !
 
+
+

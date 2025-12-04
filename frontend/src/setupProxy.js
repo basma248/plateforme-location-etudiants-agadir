@@ -1,27 +1,24 @@
+// Proxy pour rediriger les appels API vers Laravel
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function(app) {
+  // Proxy minimal - redirige /api vers http://127.0.0.1:8001/api
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:8000',
+      target: 'http://127.0.0.1:8001',
       changeOrigin: true,
       secure: false,
-      logLevel: 'debug',
-      // IMPORTANT: Configuration pour permettre l'upload de fichiers
-      // Ne pas parser le body pour les requêtes multipart
-      onProxyReq: (proxyReq, req, res) => {
-        // Pour les requêtes multipart/form-data, s'assurer que le body est bien transmis
-        if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
-          // Ne pas modifier les headers, laisser le proxy transmettre tel quel
-          console.log('[PROXY] Transmission de fichier multipart/form-data');
-          console.log('[PROXY] Content-Type:', req.headers['content-type']);
-          console.log('[PROXY] Content-Length:', req.headers['content-length']);
+      logLevel: 'error', // Seulement les erreurs critiques
+      onError: (err, req, res) => {
+        console.error('[PROXY ERROR]', err.message);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'Proxy error',
+            message: 'Impossible de se connecter au serveur Laravel. Vérifiez qu\'il est démarré sur http://127.0.0.1:8001'
+          });
         }
       },
-      // Configuration pour les fichiers
-      // Le proxy doit transmettre le body brut sans le parser
-      // http-proxy-middleware le fait par défaut, mais on s'assure que c'est bien le cas
     })
   );
 };

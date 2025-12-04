@@ -4,6 +4,7 @@ import Welcome from './Welcome';
 import LoginForm from './LoginForm';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import HomePage from './pages/HomePage';
 import AnnonceDetail from './pages/AnnonceDetail';
 import MessagePage from './pages/MessagePage';
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/annonce/:id" element={<AnnonceDetail />} />
         <Route path="/message/:annonceId" element={<MessagePage />} />

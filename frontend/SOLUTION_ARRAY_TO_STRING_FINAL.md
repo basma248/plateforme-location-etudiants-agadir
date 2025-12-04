@@ -132,3 +132,5 @@ $size = (is_array($file) && isset($file['size'])) ? (string)$file['size'] : 'NUL
 
 L'erreur "Array to string conversion" devrait maintenant être complètement résolue.
 
+
+

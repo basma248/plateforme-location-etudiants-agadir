@@ -51,3 +51,5 @@ echo "1. Du frontend qui n'envoie pas le fichier correctement\n";
 echo "2. D'un middleware qui bloque les fichiers\n";
 echo "3. D'un problème de Content-Type dans la requête\n";
 
+
+

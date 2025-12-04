@@ -7,6 +7,8 @@ use App\Http\Controllers\AnnonceController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ColocataireController;
+use App\Http\Controllers\ContactController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,13 +28,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Routes d'authentification (non protégées)
-Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-});
+// Routes d'authentification (non protégées) - ROUTE EXPLICITE
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
 // Routes publiques des annonces (consultation)
 // IMPORTANT: La route /{id} doit être définie APRÈS les routes spécifiques comme /favorites/list
@@ -41,6 +41,14 @@ Route::prefix('annonces')->group(function () {
     Route::get('/{id}', [AnnonceController::class, 'show'])
         ->middleware(\App\Http\Middleware\OptionalSanctumAuth::class)
         ->where('id', '[0-9]+');        // Afficher une annonce (public avec auth optionnelle)
+});
+
+// Routes publiques des colocataires (consultation)
+Route::prefix('colocataires')->group(function () {
+    Route::get('/', [ColocataireController::class, 'index']);       // Lister les demandes (public)
+    Route::get('/{id}', [ColocataireController::class, 'show'])
+        ->middleware(\App\Http\Middleware\OptionalSanctumAuth::class)
+        ->where('id', '[0-9]+');        // Afficher une demande (public avec auth optionnelle)
 });
 
 // Routes protégées
@@ -81,6 +89,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [MessageController::class, 'sendMessage']);
     });
 
+    // Routes des colocataires (modification)
+    Route::prefix('colocataires')->group(function () {
+        Route::get('/me/list', [ColocataireController::class, 'myColocataires']); // Mes demandes
+        Route::post('/', [ColocataireController::class, 'store']);                // Créer une demande
+        Route::put('/{id}', [ColocataireController::class, 'update'])->where('id', '[0-9]+');  // Modifier une demande
+        Route::delete('/{id}', [ColocataireController::class, 'destroy'])->where('id', '[0-9]+'); // Supprimer une demande
+        Route::post('/{id}/contact', [ColocataireController::class, 'contact'])->where('id', '[0-9]+'); // Contacter un colocataire
+    });
+
     // Routes de l'administration (réservées aux admins)
     Route::prefix('admin')->group(function () {
         // Statistiques
@@ -96,5 +113,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users', [AdminController::class, 'createUser']);
         Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->where('id', '[0-9]+');
         Route::put('/users/{id}/status', [AdminController::class, 'toggleUserStatus']);
+
+        // Gestion des messages de contact
+        Route::get('/contact-messages', [ContactController::class, 'index']);
+        Route::put('/contact-messages/{id}/read', [ContactController::class, 'markAsRead'])->where('id', '[0-9]+');
+        Route::put('/contact-messages/{id}/treated', [ContactController::class, 'markAsTreated'])->where('id', '[0-9]+');
+        Route::delete('/contact-messages/{id}', [ContactController::class, 'destroy'])->where('id', '[0-9]+');
     });
 });
+
+// Route publique pour envoyer un message de contact (pas besoin d'authentification)
+Route::post('/contact', [ContactController::class, 'store']);

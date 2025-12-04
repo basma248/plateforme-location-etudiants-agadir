@@ -1,0 +1,30 @@
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+module.exports = function(app) {
+  // Proxy avec timeout et gestion d'erreur améliorée
+  app.use(
+    '/api',
+    createProxyMiddleware({
+      target: 'http://localhost:8000',
+      changeOrigin: true,
+      secure: false,
+      logLevel: 'warn', // Afficher seulement les warnings
+      timeout: 10000, // Timeout de 10 secondes
+      proxyTimeout: 10000,
+      onProxyReq: (proxyReq, req, res) => {
+        // Ne rien faire - laisser passer
+      },
+      onError: (err, req, res) => {
+        // Ne pas bloquer si le backend n'est pas disponible
+        // Le frontend peut fonctionner sans le backend
+        if (!res.headersSent) {
+          // Ne pas afficher d'erreur pour ne pas bloquer la compilation
+          // Le frontend fonctionnera, mais les appels API échoueront
+        }
+      },
+      onProxyReqWs: (proxyReq, req, socket) => {
+        // Gérer les WebSockets si nécessaire
+      },
+    })
+  );
+};

@@ -1,10 +1,129 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { createAnnonce } from '../services/annonceService';
 import { getToken } from '../services/authService';
 import './AjouterAnnoncePage.css';
+
+// Icônes SVG React
+const IconHome = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconType = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="9" y1="3" x2="9" y2="21"></line>
+    <line x1="3" y1="9" x2="21" y2="9"></line>
+  </svg>
+);
+
+const IconLocation = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+    <circle cx="12" cy="10" r="3"></circle>
+  </svg>
+);
+
+const IconPrice = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="1" x2="12" y2="23"></line>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+  </svg>
+);
+
+const IconRuler = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21.3 8.7l-5.6-5.6c-.4-.4-1-.4-1.4 0L2.7 15.3c-.4.4-.4 1 0 1.4l5.6 5.6c.4.4 1 .4 1.4 0L21.3 10c.4-.3.4-1 0-1.3z"></path>
+    <line x1="14.5" y1="9.5" x2="19.5" y2="14.5"></line>
+  </svg>
+);
+
+const IconBed = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M2 4v16"></path>
+    <path d="M2 8h18a2 2 0 0 1 2 2v10"></path>
+    <path d="M2 12h18"></path>
+    <path d="M6 8V4"></path>
+    <path d="M6 12v4"></path>
+  </svg>
+);
+
+const IconFileText = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <polyline points="10 9 9 9 8 9"></polyline>
+  </svg>
+);
+
+const IconImage = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+    <polyline points="21 15 16 10 5 21"></polyline>
+  </svg>
+);
+
+const IconSettings = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+  </svg>
+);
+
+const IconShield = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+);
+
+const IconUser = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+    <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+
+const IconPhone = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+  </svg>
+);
+
+const IconMail = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+    <polyline points="22,6 12,13 2,6"></polyline>
+  </svg>
+);
+
+const IconUpload = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="17 8 12 3 7 8"></polyline>
+    <line x1="12" y1="3" x2="12" y2="15"></line>
+  </svg>
+);
+
+const IconX = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
 
 function AjouterAnnoncePage() {
   const navigate = useNavigate();
@@ -34,6 +153,18 @@ function AjouterAnnoncePage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Initialiser la progression des sections au chargement
+  useEffect(() => {
+    const sections = document.querySelectorAll('.form-section');
+    sections.forEach(section => {
+      const inputs = section.querySelectorAll('input:not([type="checkbox"]):not([type="file"]), select, textarea');
+      if (inputs.length > 0) {
+        const firstInput = inputs[0];
+        updateSectionProgress(firstInput);
+      }
+    });
+  }, []);
+
   const equipementsList = [
     'Wi-Fi', 'Chauffage', 'Climatisation', 'Lave-linge', 'Lave-vaisselle',
     'Parking', 'Ascenseur', 'Balcon', 'Terrasse', 'Jardin', 'Piscine',
@@ -45,6 +176,42 @@ function AjouterAnnoncePage() {
     'Pas de fêtes', 'Pas de visiteurs', 'Étudiants uniquement',
     'Filles uniquement', 'Garçons uniquement'
   ];
+
+  // Fonction pour mettre à jour la progression de la ligne décorative
+  const updateSectionProgress = (inputElement) => {
+    if (!inputElement) return;
+    const section = inputElement.closest('.form-section');
+    if (!section) return;
+
+    const inputs = section.querySelectorAll('input:not([type="checkbox"]):not([type="file"]), select, textarea');
+    const filledInputs = Array.from(inputs).filter(input => {
+      if (input.tagName === 'SELECT') {
+        return input.value && input.value !== '';
+      }
+      if (input.tagName === 'TEXTAREA') {
+        return input.value.trim() !== '';
+      }
+      return input.value.trim() !== '' && !input.classList.contains('error');
+    });
+
+    const progress = inputs.length > 0 ? filledInputs.length / inputs.length : 0;
+    
+    // Retirer toutes les classes de progression
+    section.classList.remove('section-progress-0', 'section-progress-25', 'section-progress-50', 'section-progress-75', 'section-progress-100');
+    
+    // Ajouter la classe appropriée
+    if (progress === 0) {
+      section.classList.add('section-progress-0');
+    } else if (progress <= 0.25) {
+      section.classList.add('section-progress-25');
+    } else if (progress <= 0.5) {
+      section.classList.add('section-progress-50');
+    } else if (progress <= 0.75) {
+      section.classList.add('section-progress-75');
+    } else {
+      section.classList.add('section-progress-100');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -73,6 +240,11 @@ function AjouterAnnoncePage() {
         return newErrors;
       });
     }
+
+    // Mettre à jour la progression de la ligne après un court délai pour laisser le DOM se mettre à jour
+    setTimeout(() => {
+      updateSectionProgress(e.target);
+    }, 10);
   };
 
   const handleImageUpload = (e) => {
@@ -212,6 +384,9 @@ function AjouterAnnoncePage() {
       <main className="ajouter-annonce-page">
         <div className="container">
           <div className="page-header">
+            <div className="header-icon">
+              <IconHome />
+            </div>
             <h1>Publier une annonce</h1>
             <p>Remplissez le formulaire ci-dessous pour publier votre logement</p>
           </div>
@@ -219,10 +394,22 @@ function AjouterAnnoncePage() {
           <form onSubmit={handleSubmit} className="annonce-form">
             {/* Informations de base */}
             <section className="form-section">
-              <h2>Informations de base</h2>
+              <div className="section-header">
+                <div className="section-number">1</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconHome />
+                    Informations de base
+                  </h2>
+                  <p className="section-hint">Les informations essentielles de votre logement</p>
+                </div>
+              </div>
               
               <div className="form-group">
-                <label htmlFor="titre">Titre de l'annonce *</label>
+                <label htmlFor="titre">
+                  <IconFileText />
+                  Titre de l'annonce *
+                </label>
                 <input
                   type="text"
                   id="titre"
@@ -237,25 +424,33 @@ function AjouterAnnoncePage() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="type">Type de logement *</label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className={errors.type ? 'error' : ''}
-                  >
-                    <option value="">Sélectionner un type</option>
-                    <option value="chambre">Chambre</option>
-                    <option value="studio">Studio</option>
-                    <option value="appartement">Appartement</option>
-                    <option value="colocation">Colocation</option>
-                  </select>
+                  <label htmlFor="type">
+                    <IconType />
+                    Type de logement *
+                  </label>
+                  <div className="input-wrapper">
+                    <select
+                      id="type"
+                      name="type"
+                      value={formData.type}
+                      onChange={handleInputChange}
+                      className={errors.type ? 'error' : ''}
+                    >
+                      <option value="">Sélectionner un type</option>
+                      <option value="chambre">Chambre</option>
+                      <option value="studio">Studio</option>
+                      <option value="appartement">Appartement</option>
+                      <option value="colocation">Colocation</option>
+                    </select>
+                  </div>
                   {errors.type && <span className="error-message">{errors.type}</span>}
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="zone">Zone / Quartier *</label>
+                  <label htmlFor="zone">
+                    <IconLocation />
+                    Zone / Quartier *
+                  </label>
                   <input
                     type="text"
                     id="zone"
@@ -270,7 +465,10 @@ function AjouterAnnoncePage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="adresse">Adresse complète</label>
+                <label htmlFor="adresse">
+                  <IconLocation />
+                  Adresse complète
+                </label>
                 <input
                   type="text"
                   id="adresse"
@@ -284,11 +482,23 @@ function AjouterAnnoncePage() {
 
             {/* Caractéristiques */}
             <section className="form-section">
-              <h2>Caractéristiques</h2>
+              <div className="section-header">
+                <div className="section-number">2</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconSettings />
+                    Caractéristiques
+                  </h2>
+                  <p className="section-hint">Détails techniques et prix de votre logement</p>
+                </div>
+              </div>
               
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="prix">Prix mensuel (MAD) *</label>
+                  <label htmlFor="prix">
+                    <IconPrice />
+                    Prix mensuel (MAD) *
+                  </label>
                   <input
                     type="number"
                     id="prix"
@@ -303,7 +513,10 @@ function AjouterAnnoncePage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="surface">Surface (m²) *</label>
+                  <label htmlFor="surface">
+                    <IconRuler />
+                    Surface (m²) *
+                  </label>
                   <input
                     type="number"
                     id="surface"
@@ -318,7 +531,10 @@ function AjouterAnnoncePage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="nbChambres">Nombre de chambres</label>
+                  <label htmlFor="nbChambres">
+                    <IconBed />
+                    Nombre de chambres
+                  </label>
                   <input
                     type="number"
                     id="nbChambres"
@@ -333,38 +549,52 @@ function AjouterAnnoncePage() {
 
               <div className="form-row">
                 <div className="form-group checkbox-group">
-                  <label>
+                  <label className="checkbox-label-modern">
                     <input
                       type="checkbox"
                       name="meuble"
                       checked={formData.meuble}
                       onChange={handleInputChange}
                     />
-                    <span>Logement meublé</span>
+                    <span className="checkbox-custom">
+                      {formData.meuble && <IconCheck />}
+                    </span>
+                    <span className="checkbox-text">Logement meublé</span>
                   </label>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="disponibilite">Disponibilité</label>
-                  <select
-                    id="disponibilite"
-                    name="disponibilite"
-                    value={formData.disponibilite}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="immediate">Immédiate</option>
-                    <option value="1mois">Dans 1 mois</option>
-                    <option value="2mois">Dans 2 mois</option>
-                    <option value="3mois">Dans 3 mois</option>
-                  </select>
+                  <div className="input-wrapper">
+                    <select
+                      id="disponibilite"
+                      name="disponibilite"
+                      value={formData.disponibilite}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="immediate">Immédiate</option>
+                      <option value="1mois">Dans 1 mois</option>
+                      <option value="2mois">Dans 2 mois</option>
+                      <option value="3mois">Dans 3 mois</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* Description */}
             <section className="form-section">
-              <h2>Description</h2>
+              <div className="section-header">
+                <div className="section-number">3</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconFileText />
+                    Description
+                  </h2>
+                  <p className="section-hint">Décrivez votre logement de manière attractive</p>
+                </div>
+              </div>
               
               <div className="form-group">
                 <label htmlFor="description">Description courte *</label>
@@ -395,8 +625,16 @@ function AjouterAnnoncePage() {
 
             {/* Photos */}
             <section className="form-section">
-              <h2>Photos *</h2>
-              <p className="section-hint">Ajoutez jusqu'à 10 photos depuis votre ordinateur (max 5MB chacune)</p>
+              <div className="section-header">
+                <div className="section-number">4</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconImage />
+                    Photos *
+                  </h2>
+                  <p className="section-hint">Ajoutez jusqu'à 10 photos depuis votre ordinateur (max 5MB chacune)</p>
+                </div>
+              </div>
               
               <div className="images-upload">
                 {imagePreviews.map((preview, index) => (
@@ -408,7 +646,7 @@ function AjouterAnnoncePage() {
                       onClick={() => removeImage(index)}
                       aria-label="Supprimer l'image"
                     >
-                      ×
+                      <IconX />
                     </button>
                   </div>
                 ))}
@@ -423,12 +661,9 @@ function AjouterAnnoncePage() {
                       style={{ display: 'none' }}
                     />
                     <div className="upload-content">
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                      <IconUpload />
                       <span>Ajouter des photos</span>
+                      <small>{imagePreviews.length}/10</small>
                     </div>
                   </label>
                 )}
@@ -438,16 +673,28 @@ function AjouterAnnoncePage() {
 
             {/* Équipements */}
             <section className="form-section">
-              <h2>Équipements</h2>
+              <div className="section-header">
+                <div className="section-number">5</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconSettings />
+                    Équipements
+                  </h2>
+                  <p className="section-hint">Sélectionnez les équipements disponibles</p>
+                </div>
+              </div>
               <div className="checkbox-grid">
                 {equipementsList.map(equipement => (
-                  <label key={equipement} className="checkbox-item">
+                  <label key={equipement} className="checkbox-item-modern">
                     <input
                       type="checkbox"
                       checked={formData.equipements.includes(equipement)}
                       onChange={() => handleEquipementToggle(equipement)}
                     />
-                    <span>{equipement}</span>
+                    <span className="checkbox-custom">
+                      {formData.equipements.includes(equipement) && <IconCheck />}
+                    </span>
+                    <span className="checkbox-text">{equipement}</span>
                   </label>
                 ))}
               </div>
@@ -455,16 +702,28 @@ function AjouterAnnoncePage() {
 
             {/* Règles */}
             <section className="form-section">
-              <h2>Règles de la maison</h2>
+              <div className="section-header">
+                <div className="section-number">6</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconShield />
+                    Règles de la maison
+                  </h2>
+                  <p className="section-hint">Définissez les règles de votre logement</p>
+                </div>
+              </div>
               <div className="checkbox-grid">
                 {reglesList.map(regle => (
-                  <label key={regle} className="checkbox-item">
+                  <label key={regle} className="checkbox-item-modern">
                     <input
                       type="checkbox"
                       checked={formData.regles.includes(regle)}
                       onChange={() => handleRegleToggle(regle)}
                     />
-                    <span>{regle}</span>
+                    <span className="checkbox-custom">
+                      {formData.regles.includes(regle) && <IconCheck />}
+                    </span>
+                    <span className="checkbox-text">{regle}</span>
                   </label>
                 ))}
               </div>
@@ -472,10 +731,22 @@ function AjouterAnnoncePage() {
 
             {/* Contact */}
             <section className="form-section">
-              <h2>Informations de contact</h2>
+              <div className="section-header">
+                <div className="section-number">7</div>
+                <div className="section-title-content">
+                  <h2>
+                    <IconUser />
+                    Informations de contact
+                  </h2>
+                  <p className="section-hint">Comment vous contacter pour cette annonce</p>
+                </div>
+              </div>
               
               <div className="form-group">
-                <label htmlFor="contact.nom">Nom complet *</label>
+                <label htmlFor="contact.nom">
+                  <IconUser />
+                  Nom complet *
+                </label>
                 <input
                   type="text"
                   id="contact.nom"
@@ -490,7 +761,10 @@ function AjouterAnnoncePage() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="contact.telephone">Téléphone *</label>
+                  <label htmlFor="contact.telephone">
+                    <IconPhone />
+                    Téléphone *
+                  </label>
                   <input
                     type="tel"
                     id="contact.telephone"
@@ -504,7 +778,10 @@ function AjouterAnnoncePage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="contact.email">Email *</label>
+                  <label htmlFor="contact.email">
+                    <IconMail />
+                    Email *
+                  </label>
                   <input
                     type="email"
                     id="contact.email"
@@ -533,7 +810,17 @@ function AjouterAnnoncePage() {
                 className="btn-submit"
                 disabled={loading}
               >
-                {loading ? 'Publication en cours...' : 'Publier l\'annonce'}
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Publication en cours...
+                  </>
+                ) : (
+                  <>
+                    <IconUpload />
+                    Publier l'annonce
+                  </>
+                )}
               </button>
             </div>
           </form>

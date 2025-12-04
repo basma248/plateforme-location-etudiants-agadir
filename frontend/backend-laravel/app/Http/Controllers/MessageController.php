@@ -7,9 +7,101 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class MessageController extends Controller
 {
+    /**
+     * Helper pour convertir une valeur en chaîne de manière sécurisée
+     */
+    private function safeString($value, $default = null)
+    {
+        if (is_null($value)) {
+            return $default;
+        }
+        if (is_string($value)) {
+            return trim($value) ?: $default;
+        }
+        if (is_array($value)) {
+            return !empty($value) ? (string)reset($value) : $default;
+        }
+        if (is_object($value)) {
+            return null; // Ne pas convertir les objets
+        }
+        $str = (string)$value;
+        return ($str && $str !== 'Array') ? $str : $default;
+    }
+    
+    /**
+     * Formate l'URL de l'avatar pour garantir qu'elle est absolue
+     */
+    private function formatAvatarUrl($avatar)
+    {
+        try {
+            // Convertir en chaîne de manière sécurisée
+            $avatarStr = $this->safeString($avatar);
+            if (!$avatarStr) {
+                return null;
+            }
+            
+            // Si c'est déjà une URL absolue (http:// ou https://), la retourner telle quelle
+            if (str_starts_with($avatarStr, 'http://') || str_starts_with($avatarStr, 'https://')) {
+                return $avatarStr;
+            }
+            
+            // Si c'est un chemin qui commence par /storage/, le nettoyer
+            if (str_starts_with($avatarStr, '/storage/')) {
+                $relativePath = str_replace('/storage/', '', $avatarStr);
+            } else {
+                // Sinon, c'est probablement un chemin relatif (avatars/filename.jpg)
+                $relativePath = $avatarStr;
+            }
+            
+            // S'assurer que $relativePath est une chaîne valide
+            $relativePath = $this->safeString($relativePath);
+            if (!$relativePath) {
+                return null;
+            }
+            
+            // Utiliser Storage::url() pour générer l'URL complète
+            $url = Storage::disk('public')->url($relativePath);
+            
+            // S'assurer que $url est une chaîne
+            $url = $this->safeString($url);
+            if (!$url) {
+                // Fallback: construire l'URL manuellement
+                $baseUrl = request()->getSchemeAndHttpHost();
+                $relativePathStr = $this->safeString($relativePath, '');
+                if ($relativePathStr) {
+                    $url = sprintf('%s/storage/%s', $baseUrl, ltrim($relativePathStr, '/'));
+                } else {
+                    $url = null;
+                }
+            }
+            
+            if (!$url) {
+                return null;
+            }
+            
+            // Si Storage::url() retourne une URL relative, la convertir en absolue
+            $urlStr = $this->safeString($url, '');
+            if ($urlStr && !str_starts_with($urlStr, 'http://') && !str_starts_with($urlStr, 'https://')) {
+                $baseUrl = request()->getSchemeAndHttpHost();
+                // S'assurer que l'URL commence par /storage/
+                if (!str_starts_with($urlStr, '/storage/')) {
+                    $urlStr = sprintf('/storage/%s', ltrim($urlStr, '/'));
+                }
+                $urlStr = sprintf('%s/%s', $baseUrl, ltrim($urlStr, '/'));
+                $url = $urlStr;
+            }
+            
+            return $url ?: null;
+        } catch (\Exception $e) {
+            \Log::error('Erreur dans formatAvatarUrl: ' . $e->getMessage());
+            return null;
+        }
+    }
     /**
      * Récupère les messages d'une annonce
      */
@@ -58,23 +150,43 @@ class MessageController extends Controller
             }])
             ->orderBy('created_at', 'asc')
             ->get()
-            ->map(function ($message) {
+            ->map(function ($message) use ($user, $annonce) {
+                // Déterminer si le message est de l'utilisateur connecté ou du propriétaire
+                $isFromCurrentUser = $message->sender_id == $user->id;
+                $senderType = $isFromCurrentUser ? 'moi' : 'proprietaire';
+                
+                // Récupérer l'avatar directement depuis la BD pour plus de fiabilité
+                $avatarRaw = null;
+                if ($message->sender) {
+                    // Essayer d'abord depuis le modèle
+                    $avatarRaw = $message->sender->avatar ?? null;
+                    
+                    // Si null, récupérer directement depuis la BD
+                    if (!$avatarRaw) {
+                        $avatarRaw = DB::table('users')->where('id', $message->sender->id)->value('avatar');
+                    }
+                }
+                
                 return [
                     'id' => $message->id,
                     'conversation_id' => $message->conversation_id,
                     'sender_id' => $message->sender_id,
+                    'sender' => $senderType, // Chaîne 'moi' ou 'proprietaire' pour le frontend
                     'content' => $message->content,
                     'sujet' => $message->sujet,
                     'telephone' => $message->telephone,
-                    'date_visite' => $message->date_visite,
+                    'dateVisite' => $message->date_visite ? $message->date_visite->toDateString() : null,
+                    'date_visite' => $message->date_visite ? $message->date_visite->toDateString() : null,
                     'lu' => $message->lu,
+                    'timestamp' => $message->created_at->toISOString(),
                     'created_at' => $message->created_at->toISOString(),
-                    'sender' => $message->sender ? [
+                    'sender_data' => $message->sender ? [
                         'id' => $message->sender->id,
-                        'nom' => $message->sender->nom,
-                        'prenom' => $message->sender->prenom,
-                        'email' => $message->sender->email,
-                        'avatar' => $message->sender->avatar ?? $message->sender->profile_image ?? null,
+                        'nom' => $message->sender->nom ?? '',
+                        'prenom' => $message->sender->prenom ?? '',
+                        'nomComplet' => trim(($message->sender->prenom ?? '') . ' ' . ($message->sender->nom ?? '')) ?: ($message->sender->email ?? 'Utilisateur'),
+                        'email' => $message->sender->email ?? '',
+                        'avatar' => $this->formatAvatarUrl($avatarRaw),
                     ] : null,
                 ];
             });
@@ -139,6 +251,22 @@ class MessageController extends Controller
             $query->select('id', 'nom', 'prenom', 'email', 'avatar');
         }]);
 
+        // Déterminer si le message est de l'utilisateur connecté ou du propriétaire
+        $isFromCurrentUser = $message->sender_id == $user->id;
+        $senderType = $isFromCurrentUser ? 'moi' : 'proprietaire';
+        
+        // Récupérer l'avatar directement depuis la BD pour plus de fiabilité
+        $avatarRaw = null;
+        if ($message->sender) {
+            // Essayer d'abord depuis le modèle
+            $avatarRaw = $message->sender->avatar ?? null;
+            
+            // Si null, récupérer directement depuis la BD
+            if (!$avatarRaw) {
+                $avatarRaw = DB::table('users')->where('id', $message->sender->id)->value('avatar');
+            }
+        }
+        
         return response()->json([
             'success' => true,
             'message' => 'Message envoyé avec succès',
@@ -146,18 +274,22 @@ class MessageController extends Controller
                 'id' => $message->id,
                 'conversation_id' => $message->conversation_id,
                 'sender_id' => $message->sender_id,
+                'sender' => $senderType, // Chaîne 'moi' ou 'proprietaire' pour le frontend
                 'content' => $message->content,
                 'sujet' => $message->sujet,
                 'telephone' => $message->telephone,
-                'date_visite' => $message->date_visite,
+                'dateVisite' => $message->date_visite ? $message->date_visite->toDateString() : null,
+                'date_visite' => $message->date_visite ? $message->date_visite->toDateString() : null,
                 'lu' => $message->lu,
+                'timestamp' => $message->created_at->toISOString(),
                 'created_at' => $message->created_at->toISOString(),
-                'sender' => $message->sender ? [
+                'sender_data' => $message->sender ? [
                     'id' => $message->sender->id,
-                    'nom' => $message->sender->nom,
-                    'prenom' => $message->sender->prenom,
-                    'email' => $message->sender->email,
-                    'avatar' => $message->sender->avatar ?? $message->sender->profile_image ?? null,
+                    'nom' => $message->sender->nom ?? '',
+                    'prenom' => $message->sender->prenom ?? '',
+                    'nomComplet' => trim(($message->sender->prenom ?? '') . ' ' . ($message->sender->nom ?? '')) ?: ($message->sender->email ?? 'Utilisateur'),
+                    'email' => $message->sender->email ?? '',
+                    'avatar' => $this->formatAvatarUrl($avatarRaw),
                 ] : null,
             ]
         ], 201);
@@ -208,6 +340,18 @@ class MessageController extends Controller
                     }
                 }
 
+                // Récupérer l'avatar de l'autre utilisateur directement depuis la BD pour plus de fiabilité
+                $avatarRaw = null;
+                if ($otherUser) {
+                    // Essayer d'abord depuis le modèle
+                    $avatarRaw = $otherUser->avatar ?? null;
+                    
+                    // Si null, récupérer directement depuis la BD
+                    if (!$avatarRaw) {
+                        $avatarRaw = DB::table('users')->where('id', $otherUser->id)->value('avatar');
+                    }
+                }
+
                 return [
                     'id' => $conversation->id,
                     'annonce' => [
@@ -222,8 +366,9 @@ class MessageController extends Controller
                         'id' => $otherUser->id,
                         'nom' => $otherUser->nom ?? '',
                         'prenom' => $otherUser->prenom ?? '',
+                        'nomComplet' => trim(($otherUser->prenom ?? '') . ' ' . ($otherUser->nom ?? '')) ?: ($otherUser->email ?? 'Utilisateur'),
                         'email' => $otherUser->email ?? '',
-                        'avatar' => $otherUser->avatar ?? $otherUser->profile_image ?? null,
+                        'avatar' => $this->formatAvatarUrl($avatarRaw),
                     ] : null,
                     'last_message' => $lastMessage ? [
                         'content' => $lastMessage->content,

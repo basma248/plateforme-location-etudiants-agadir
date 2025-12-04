@@ -3,6 +3,116 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { isAdmin } from '../services/authService';
+
+// Icônes SVG React
+const IconLock = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+const IconDashboard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7"></rect>
+    <rect x="14" y="3" width="7" height="7"></rect>
+    <rect x="14" y="14" width="7" height="7"></rect>
+    <rect x="3" y="14" width="7" height="7"></rect>
+  </svg>
+);
+
+const IconHome = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>
+);
+
+const IconMail = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+    <polyline points="22,6 12,13 2,6"></polyline>
+  </svg>
+);
+
+const IconMessage = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  </svg>
+);
+
+const IconClock = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
+  </svg>
+);
+
+const IconAlert = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+    <line x1="12" y1="9" x2="12" y2="13"></line>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+);
+
+const IconPause = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="6" y="4" width="4" height="16"></rect>
+    <rect x="14" y="4" width="4" height="16"></rect>
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+
+const IconRefresh = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+);
+
+const IconX = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
+
+const IconEye = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
 import {
   getDashboardStats,
   getAllAnnonces,
@@ -11,7 +121,11 @@ import {
   deleteAnnonceAdmin,
   createUser,
   deleteUser,
-  toggleUserStatus
+  toggleUserStatus,
+  getContactMessages,
+  markContactMessageAsRead,
+  markContactMessageAsTreated,
+  deleteContactMessage
 } from '../services/adminService';
 import './AdminPage.css';
 
@@ -21,6 +135,8 @@ function AdminPage() {
   const [stats, setStats] = useState(null);
   const [annonces, setAnnonces] = useState([]);
   const [users, setUsers] = useState([]);
+  const [contactMessages, setContactMessages] = useState([]);
+  const [selectedStatCard, setSelectedStatCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
   
@@ -54,10 +170,14 @@ function AdminPage() {
     setLoading(true);
     try {
       console.log('Chargement des données admin...');
-      const [statsData, annoncesData, usersData] = await Promise.all([
+      const [statsData, annoncesData, usersData, messagesData] = await Promise.all([
         getDashboardStats(),
         getAllAnnonces(),
-        getAllUsers()
+        getAllUsers(),
+        getContactMessages().catch(err => {
+          console.warn('Erreur lors du chargement des messages de contact:', err);
+          return [];
+        })
       ]);
       
       console.log('Stats reçues:', statsData);
@@ -65,23 +185,28 @@ function AdminPage() {
       console.log('Annonces reçues (contenu):', annoncesData);
       console.log('Users reçus (type):', typeof usersData, Array.isArray(usersData));
       console.log('Users reçus (contenu):', usersData);
+      console.log('Messages de contact reçus:', messagesData);
       
       setStats(statsData);
       // S'assurer que les données sont des tableaux
       const annoncesArray = Array.isArray(annoncesData) ? annoncesData : (annoncesData?.data?.data || annoncesData?.data || []);
       const usersArray = Array.isArray(usersData) ? usersData : (usersData?.data?.data || usersData?.data || []);
+      const messagesArray = Array.isArray(messagesData) ? messagesData : [];
       
       console.log('Annonces finales:', annoncesArray);
       console.log('Users finaux:', usersArray);
+      console.log('Messages finaux:', messagesArray);
       
       setAnnonces(annoncesArray);
       setUsers(usersArray);
+      setContactMessages(messagesArray);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       alert('Erreur lors du chargement des données: ' + error.message);
       // Initialiser avec des tableaux vides en cas d'erreur
       setAnnonces([]);
       setUsers([]);
+      setContactMessages([]);
     } finally {
       setLoading(false);
     }
@@ -192,7 +317,10 @@ function AdminPage() {
       <main className="admin-main">
         <div className="admin-container">
           <div className="admin-header">
-            <h1>🔐 Administration</h1>
+            <h1>
+              <IconLock />
+              Administration
+            </h1>
             <p>Gestion de la plateforme de location étudiante</p>
           </div>
 
@@ -202,19 +330,29 @@ function AdminPage() {
               className={activeTab === 'dashboard' ? 'active' : ''}
               onClick={() => setActiveTab('dashboard')}
             >
-              📊 Dashboard
+              <IconDashboard />
+              Dashboard
             </button>
             <button
               className={activeTab === 'annonces' ? 'active' : ''}
               onClick={() => setActiveTab('annonces')}
             >
-              🏠 Annonces ({annonces.length})
+              <IconHome />
+              Annonces ({annonces.length})
             </button>
             <button
               className={activeTab === 'users' ? 'active' : ''}
               onClick={() => setActiveTab('users')}
             >
-              👥 Utilisateurs ({users.length})
+              <IconUsers />
+              Utilisateurs ({users.length})
+            </button>
+            <button
+              className={activeTab === 'messages' ? 'active' : ''}
+              onClick={() => setActiveTab('messages')}
+            >
+              <IconMail />
+              Messages ({contactMessages.length})
             </button>
           </div>
 
@@ -222,46 +360,43 @@ function AdminPage() {
           {activeTab === 'dashboard' && (
             <div className="admin-dashboard">
               <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-icon">🏠</div>
+                <div 
+                  className={`stat-card stat-card-primary ${selectedStatCard === 'annonces' ? 'active' : ''}`}
+                  onClick={() => setSelectedStatCard(selectedStatCard === 'annonces' ? null : 'annonces')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="stat-icon">
+                    <IconHome />
+                  </div>
                   <div className="stat-content">
                     <h3>{stats?.totalAnnonces || 0}</h3>
                     <p>Annonces totales</p>
                   </div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-icon">👥</div>
+                <div 
+                  className={`stat-card stat-card-secondary ${selectedStatCard === 'users' ? 'active' : ''}`}
+                  onClick={() => setSelectedStatCard(selectedStatCard === 'users' ? null : 'users')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="stat-icon">
+                    <IconUsers />
+                  </div>
                   <div className="stat-content">
                     <h3>{stats?.totalUsers || 0}</h3>
                     <p>Utilisateurs</p>
                   </div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-icon">💬</div>
-                  <div className="stat-content">
-                    <h3>{stats?.totalMessages || 0}</h3>
-                    <p>Messages</p>
+                <div 
+                  className={`stat-card stat-card-messages ${selectedStatCard === 'messages' ? 'active' : ''}`}
+                  onClick={() => setSelectedStatCard(selectedStatCard === 'messages' ? null : 'messages')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="stat-icon">
+                    <IconMail />
                   </div>
-                </div>
-                <div className="stat-card warning">
-                  <div className="stat-icon">⏳</div>
                   <div className="stat-content">
-                    <h3>{stats?.annoncesEnAttente || 0}</h3>
-                    <p>En attente</p>
-                  </div>
-                </div>
-                <div className="stat-card danger">
-                  <div className="stat-icon">⚠️</div>
-                  <div className="stat-content">
-                    <h3>{stats?.annoncesSignalees || 0}</h3>
-                    <p>Annonces signalées</p>
-                  </div>
-                </div>
-                <div className="stat-card warning">
-                  <div className="stat-icon">⏸️</div>
-                  <div className="stat-content">
-                    <h3>{stats?.usersSuspendus || 0}</h3>
-                    <p>Utilisateurs suspendus</p>
+                    <h3>{contactMessages.filter(msg => !msg.lu).length}</h3>
+                    <p>Messages non lus</p>
                   </div>
                 </div>
               </div>
@@ -320,9 +455,10 @@ function AdminPage() {
           {activeTab === 'annonces' && (
             <div className="admin-annonces">
               <div className="section-header">
-                <h2>📋 Gestion des annonces</h2>
+                <h2>Gestion des annonces</h2>
                 <button className="btn-refresh" onClick={loadDashboardData} disabled={loadingAction}>
-                  🔄 Actualiser
+                  <IconRefresh />
+                  Actualiser
                 </button>
               </div>
               <div className="table-container">
@@ -378,7 +514,8 @@ function AdminPage() {
                                   onClick={() => openModerateModal(annonce, 'approuver')}
                                   disabled={loadingAction}
                                 >
-                                  ✓ Approuver
+                                  <IconCheck />
+                                  Approuver
                                 </button>
                               )}
                               {annonce.statut !== 'rejete' && (
@@ -387,7 +524,8 @@ function AdminPage() {
                                   onClick={() => openModerateModal(annonce, 'rejeter')}
                                   disabled={loadingAction}
                                 >
-                                  ✗ Rejeter
+                                  <IconX />
+                                  Rejeter
                                 </button>
                               )}
                               <button
@@ -395,7 +533,8 @@ function AdminPage() {
                                 onClick={() => handleDeleteAnnonce(annonce.id)}
                                 disabled={loadingAction}
                               >
-                                🗑️ Supprimer
+                                <IconTrash />
+                                Supprimer
                               </button>
                             </div>
                           </td>
@@ -412,13 +551,18 @@ function AdminPage() {
           {activeTab === 'users' && (
             <div className="admin-users">
               <div className="section-header">
-                <h2>👥 Gestion des utilisateurs</h2>
+                <h2>
+                  <IconUsers />
+                  Gestion des utilisateurs
+                </h2>
                 <div>
                   <button className="btn-primary" onClick={() => setShowAddUserModal(true)}>
-                    ➕ Ajouter un utilisateur
+                    <IconPlus />
+                    Ajouter un utilisateur
                   </button>
                   <button className="btn-refresh" onClick={loadDashboardData} disabled={loadingAction}>
-                    🔄 Actualiser
+                    <IconRefresh />
+                    Actualiser
                   </button>
                 </div>
               </div>
@@ -469,7 +613,17 @@ function AdminPage() {
                                 onClick={() => handleToggleUserStatus(user.id, user.suspended)}
                                 disabled={loadingAction}
                               >
-                                {user.suspended ? '✓ Réactiver' : '⏸️ Suspendre'}
+                                {user.suspended ? (
+                                  <>
+                                    <IconCheck />
+                                    Réactiver
+                                  </>
+                                ) : (
+                                  <>
+                                    <IconPause />
+                                    Suspendre
+                                  </>
+                                )}
                               </button>
                               {user.role !== 'admin' && user.role !== 'administrator' && (
                                 <button
@@ -477,9 +631,205 @@ function AdminPage() {
                                   onClick={() => handleDeleteUser(user.id)}
                                   disabled={loadingAction}
                                 >
-                                  🗑️ Supprimer
+                                  <IconTrash />
+                                  Supprimer
                                 </button>
                               )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Messages de Contact Tab */}
+          {activeTab === 'messages' && (
+            <div className="admin-messages">
+              <div className="section-header">
+                <h2>
+                  <IconMail />
+                  Messages de contact
+                </h2>
+                <button className="btn-refresh" onClick={loadDashboardData} disabled={loadingAction}>
+                  <IconRefresh />
+                  Actualiser
+                </button>
+              </div>
+              <div className="table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nom</th>
+                      <th>Email</th>
+                      <th>Téléphone</th>
+                      <th>Type</th>
+                      <th>Sujet</th>
+                      <th>Message</th>
+                      <th>Date</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contactMessages.length === 0 ? (
+                      <tr>
+                        <td colSpan="10" style={{ textAlign: 'center', padding: '2rem' }}>
+                          Aucun message de contact trouvé
+                        </td>
+                      </tr>
+                    ) : (
+                      contactMessages.map(message => (
+                        <tr 
+                          key={message.id} 
+                          id={`message-${message.id}`}
+                          style={{ 
+                            backgroundColor: !message.lu ? '#fff9e6' : 'transparent',
+                            opacity: message.traite ? 0.7 : 1
+                          }}
+                        >
+                          <td>{message.id}</td>
+                          <td><strong>{message.nom}</strong></td>
+                          <td>{message.email}</td>
+                          <td>{message.telephone || 'N/A'}</td>
+                          <td>
+                            <span className="badge">
+                              {message.type === 'question' ? 'Question' :
+                               message.type === 'reclamation' ? 'Réclamation' :
+                               message.type === 'contrainte' ? 'Contrainte' :
+                               message.type === 'suggestion' ? 'Suggestion' :
+                               message.type === 'annonce' ? 'Annonce' :
+                               message.type === 'technique' ? 'Technique' :
+                               message.type || 'Autre'}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{message.sujet}</strong>
+                          </td>
+                          <td>
+                            <div style={{ maxWidth: '300px', fontSize: '12px', color: '#666' }}>
+                              {message.message && message.message.length > 100 
+                                ? `${message.message.substring(0, 100)}...` 
+                                : message.message}
+                            </div>
+                          </td>
+                          <td>
+                            {message.created_at 
+                              ? new Date(message.created_at).toLocaleDateString('fr-FR', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : 'N/A'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className={`badge ${message.lu ? 'success' : 'warning'}`}>
+                                {message.lu ? (
+                                  <>
+                                    <IconCheck style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                                    Lu
+                                  </>
+                                ) : (
+                                  '● Non lu'
+                                )}
+                              </span>
+                              {message.traite && (
+                                <span className="badge success">
+                                  <IconCheck style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                                  Traité
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="action-buttons">
+                              {!message.lu && (
+                                <button
+                                  className="btn-action btn-info"
+                                  onClick={async () => {
+                                    setLoadingAction(true);
+                                    try {
+                                      await markContactMessageAsRead(message.id);
+                                      // Mettre à jour localement le message comme lu
+                                      setContactMessages(prevMessages => 
+                                        prevMessages.map(msg => 
+                                          msg.id === message.id ? { ...msg, lu: true } : msg
+                                        )
+                                      );
+                                      alert('Message marqué comme lu');
+                                    } catch (error) {
+                                      alert('Erreur: ' + error.message);
+                                    } finally {
+                                      setLoadingAction(false);
+                                    }
+                                  }}
+                                  disabled={loadingAction}
+                                  title="Marquer comme lu"
+                                >
+                                  <IconEye />
+                                  Lu
+                                </button>
+                              )}
+                              {!message.traite && (
+                                <button
+                                  className="btn-action btn-success"
+                                  onClick={async () => {
+                                    setLoadingAction(true);
+                                    try {
+                                      await markContactMessageAsTreated(message.id);
+                                      await loadDashboardData();
+                                      alert('Message marqué comme traité');
+                                    } catch (error) {
+                                      alert('Erreur: ' + error.message);
+                                    } finally {
+                                      setLoadingAction(false);
+                                    }
+                                  }}
+                                  disabled={loadingAction}
+                                  title="Marquer comme traité"
+                                >
+                                  <IconCheck />
+                                  Traité
+                                </button>
+                              )}
+                              <button
+                                className="btn-action btn-danger"
+                                onClick={async () => {
+                                  if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) return;
+                                  setLoadingAction(true);
+                                  try {
+                                    await deleteContactMessage(message.id);
+                                    await loadDashboardData();
+                                    alert('Message supprimé avec succès');
+                                  } catch (error) {
+                                    alert('Erreur: ' + error.message);
+                                  } finally {
+                                    setLoadingAction(false);
+                                  }
+                                }}
+                                disabled={loadingAction}
+                                title="Supprimer"
+                              >
+                                <IconTrash />
+                              </button>
+                              <button
+                                className="btn-action btn-info"
+                                onClick={() => {
+                                  const fullMessage = `Nom: ${message.nom}\nEmail: ${message.email}\nTéléphone: ${message.telephone || 'N/A'}\nType: ${message.type}\nSujet: ${message.sujet}\n\nMessage:\n${message.message}`;
+                                  alert(fullMessage);
+                                }}
+                                title="Voir le message complet"
+                              >
+                                <IconEye />
+                                Voir
+                              </button>
                             </div>
                           </td>
                         </tr>

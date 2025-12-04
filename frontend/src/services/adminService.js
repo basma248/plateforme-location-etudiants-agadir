@@ -332,6 +332,168 @@ export const toggleUserStatus = async (id, suspended) => {
   }
 };
 
+/**
+ * Récupère tous les messages de contact
+ */
+export const getContactMessages = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
+        queryParams.append(key, filters[key]);
+      }
+    });
+
+    const url = `${API_BASE_URL}/admin/contact-messages${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
+    if (!response.ok) {
+      let errorMessage = `Erreur HTTP: ${response.status}`;
+      
+      if (isJson) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error('Réponse d\'erreur:', text.substring(0, 200));
+        }
+      } else {
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 200));
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur (non-JSON)');
+    }
+
+    const data = await response.json();
+    // Le backend retourne {success: true, data: [...]}
+    if (data.success && data.data) {
+      return Array.isArray(data.data) ? data.data : [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des messages de contact:', error);
+    throw error;
+  }
+};
+
+/**
+ * Marque un message de contact comme lu
+ */
+export const markContactMessageAsRead = async (id) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin/contact-messages/${id}/read`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Erreur lors du marquage du message comme lu:', error);
+    throw error;
+  }
+};
+
+/**
+ * Marque un message de contact comme traité
+ */
+export const markContactMessageAsTreated = async (id) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin/contact-messages/${id}/treated`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Erreur lors du marquage du message comme traité:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprime un message de contact
+ */
+export const deleteContactMessage = async (id) => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin/contact-messages/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du message:', error);
+    throw error;
+  }
+};
+
 // ===== DONNÉES D'EXEMPLE (pour le développement sans backend) =====
 
 const getExampleAnnonces = () => {

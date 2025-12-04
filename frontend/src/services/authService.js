@@ -210,18 +210,89 @@ export const forgotPassword = async (email) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({ email }),
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erreur lors de la demande');
+      let errorMessage = 'Erreur lors de la demande de réinitialisation';
+      
+      if (isJson) {
+        try {
+          const error = await response.json();
+          errorMessage = error.message || errorMessage;
+        } catch (e) {
+          console.error('Erreur lors du parsing de l\'erreur:', e);
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur');
     }
 
     return await response.json();
   } catch (error) {
     console.error('Erreur lors de la demande de réinitialisation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Réinitialisation du mot de passe avec token
+ */
+export const resetPassword = async (email, token, password, passwordConfirmation) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        token,
+        password,
+        password_confirmation: passwordConfirmation,
+      }),
+    });
+
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
+    if (!response.ok) {
+      let errorMessage = 'Erreur lors de la réinitialisation';
+      
+      if (isJson) {
+        try {
+          const error = await response.json();
+          if (error.errors) {
+            const errorMessages = Object.values(error.errors).flat().join(', ');
+            errorMessage = errorMessages || error.message || errorMessage;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch (e) {
+          console.error('Erreur lors du parsing de l\'erreur:', e);
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      throw new Error('Réponse invalide du serveur');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la réinitialisation:', error);
     throw error;
   }
 };

@@ -1,21 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CardAnnonce from '../components/CardAnnonce';
-import AdvancedFilters from '../components/AdvancedFilters';
 import { getAnnonces } from '../services/annonceService';
 import { getCurrentUser, isAuthenticated } from '../services/authService';
 import './HomePage.css';
 
+// Icônes SVG React
+const IconHome = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <polyline points="15 18 9 12 15 6"></polyline>
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+);
+
+const IconStar = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+  </svg>
+);
+
+const IconShield = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+);
+
+const IconZap = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+  </svg>
+);
+
+const IconHeart = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+  </svg>
+);
+
+const IconCheckCircle = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+  </svg>
+);
+
 export default function HomePage() {
-  const navigate = useNavigate();
   const [annonces, setAnnonces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [user, setUser] = useState(null);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     type: '',
     zone: '',
     prixMin: '',
@@ -26,18 +84,20 @@ export default function HomePage() {
     disponibilite: ''
   });
 
+  const logementsCarouselRef = useRef(null);
+  const colocationCarouselRef = useRef(null);
+
   // Vérifier l'utilisateur connecté
   useEffect(() => {
     if (isAuthenticated()) {
       const currentUser = getCurrentUser();
       setUser(currentUser);
       setShowWelcome(true);
-      // Masquer le message après 5 secondes
       setTimeout(() => setShowWelcome(false), 5000);
     }
   }, []);
 
-  // Images du carrousel - haute qualité depuis Unsplash
+  // Images du carrousel hero
   const heroImages = [
     {
       url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1920&q=80',
@@ -61,163 +121,87 @@ export default function HomePage() {
     }
   ];
 
-  // Statistiques attractives
+  // Statistiques
   const stats = [
-    { number: '500+', label: 'Annonces actives', icon: '🏠' },
-    { number: '1200+', label: 'Étudiants satisfaits', icon: '👥' },
-    { number: '98%', label: 'Taux de satisfaction', icon: '⭐' },
-    { number: '24/7', label: 'Support disponible', icon: '💬' }
+    { number: '500+', label: 'Annonces actives', icon: <IconHome /> },
+    { number: '1200+', label: 'Étudiants satisfaits', icon: <IconUsers /> },
+    { number: '98%', label: 'Taux de satisfaction', icon: <IconStar /> }
+  ];
+
+  // Features
+  const features = [
+    {
+      icon: <IconShield />,
+      title: 'Annonces vérifiées',
+      description: 'Toutes les annonces sont vérifiées pour garantir votre sécurité'
+    },
+    {
+      icon: <IconZap />,
+      title: 'Recherche rapide',
+      description: 'Trouvez votre logement idéal en quelques clics'
+    },
+    {
+      icon: <IconHeart />,
+      title: '100% Gratuit',
+      description: 'Aucun frais caché, service entièrement gratuit pour les étudiants'
+    }
   ];
 
   // Témoignages
   const testimonials = [
     {
-      name: 'Ahmed B.',
-      role: 'Étudiant',
-      text: 'J\'ai trouvé mon logement en 2 jours ! Plateforme très intuitive.',
-      avatar: '👨‍🎓'
+      name: 'Ahmed Benali',
+      role: 'Étudiant en Informatique',
+      text: 'J\'ai trouvé mon logement en 2 jours ! La plateforme est très intuitive et les propriétaires sont sérieux. Je recommande vivement.',
+      rating: 5,
+      avatar: 'https://i.pravatar.cc/150?img=1',
+      location: 'Agadir'
     },
     {
-      name: 'Fatima A.',
-      role: 'Étudiante',
-      text: 'Service excellent, les propriétaires sont vérifiés. Je recommande !',
-      avatar: '👩‍🎓'
+      name: 'Fatima Alami',
+      role: 'Étudiante en Médecine',
+      text: 'Service excellent ! Les annonces sont vérifiées et j\'ai pu trouver une chambre proche de mon université. Très satisfaite de mon expérience.',
+      rating: 5,
+      avatar: 'https://i.pravatar.cc/150?img=2',
+      location: 'Agadir'
     },
     {
-      name: 'Youssef M.',
-      role: 'Étudiant',
-      text: 'La meilleure plateforme pour trouver un logement étudiant à Agadir.',
-      avatar: '👨‍💼'
+      name: 'Youssef Moussa',
+      role: 'Étudiant en Commerce',
+      text: 'La meilleure plateforme pour trouver un logement étudiant à Agadir. Interface moderne, recherche facile et résultats rapides.',
+      rating: 5,
+      avatar: 'https://i.pravatar.cc/150?img=3',
+      location: 'Agadir'
     }
   ];
 
-  // Données d'exemple si l'API n'est pas disponible
-  const exampleAnnonces = [
-    {
-      id: 1,
-      titre: 'Chambre moderne près de l\'université',
-      zone: 'Universiapolis',
-      prix: 1500,
-      type: 'chambre',
-      surface: 15,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Chambre spacieuse et lumineuse dans un appartement partagé.',
-      images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800'],
-      rating: 4.8
-    },
-    {
-      id: 2,
-      titre: 'Studio indépendant Founty',
-      zone: 'Founty',
-      prix: 2500,
-      type: 'studio',
-      surface: 25,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Studio entièrement meublé avec cuisine équipée.',
-      images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800'],
-      rating: 4.9
-    },
-    {
-      id: 3,
-      titre: 'Appartement 2 chambres Hay Salam',
-      zone: 'Hay Salam',
-      prix: 3500,
-      type: 'appartement',
-      surface: 60,
-      nbChambres: 2,
-      meuble: false,
-      description: 'Bel appartement au 2ème étage avec balcon.',
-      images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800'],
-      rating: 4.7
-    },
-    {
-      id: 4,
-      titre: 'Colocation étudiante centre-ville',
-      zone: 'Centre-ville',
-      prix: 1200,
-      type: 'colocation',
-      surface: 20,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Chambre dans colocation sympa avec 2 autres étudiants.',
-      images: ['https://images.unsplash.com/photo-1556912172-45b7abe8b7e8?w=800'],
-      rating: 4.6
-    },
-    {
-      id: 5,
-      titre: 'Studio moderne avec terrasse',
-      zone: 'Anza',
-      prix: 2800,
-      type: 'studio',
-      surface: 30,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Studio récent avec terrasse privée. Vue sur la mer.',
-      images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'],
-      rating: 5.0
-    },
-    {
-      id: 6,
-      titre: 'Chambre dans villa étudiante',
-      zone: 'Inezgane',
-      prix: 1800,
-      type: 'chambre',
-      surface: 18,
-      nbChambres: 1,
-      meuble: true,
-      description: 'Chambre dans une belle villa avec jardin.',
-      images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800'],
-      rating: 4.5
-    }
-  ];
-
-  // Carrousel automatique
+  // Carrousel automatique hero
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [heroImages.length]);
 
+  // Charger les annonces
   useEffect(() => {
     const loadAnnonces = async () => {
       setLoading(true);
       try {
-        console.log('Chargement des annonces avec filtres:', filters);
         const data = await getAnnonces(filters);
-        console.log('Données reçues (HomePage):', data);
         
         if (data && Array.isArray(data)) {
-          console.log('Annonces chargées:', data.length, 'annonces');
-          // Vérifier que chaque annonce a un ID
-          data.forEach((annonce, index) => {
-            if (!annonce.id) {
-              console.warn(`Annonce à l'index ${index} n'a pas d'ID:`, annonce);
-            }
-            console.log(`Annonce ${index}: ID=${annonce.id}, Titre=${annonce.titre}, Images=${annonce.images?.length || 0}, All_images=${annonce.all_images?.length || 0}`);
-            if (annonce.images && annonce.images.length > 0) {
-              console.log(`  Images URLs:`, annonce.images);
-            }
-          });
           setAnnonces(data);
         } else if (data && data.data && Array.isArray(data.data)) {
-          console.log('Annonces chargées (data.data):', data.data.length, 'annonces');
           setAnnonces(data.data);
         } else if (data && typeof data === 'object') {
           const annoncesArray = data.data || data.items || data.results || [];
-          console.log('Annonces chargées (objet):', annoncesArray.length, 'annonces');
           setAnnonces(Array.isArray(annoncesArray) ? annoncesArray : []);
         } else {
-          console.warn('Aucune annonce trouvée ou format inattendu');
           setAnnonces([]);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des annonces:', error);
-        console.error('Détails de l\'erreur:', error.message);
-        console.error('Stack:', error.stack);
-        // NE PAS utiliser les données d'exemple - laisser un tableau vide
         setAnnonces([]);
       } finally {
         setLoading(false);
@@ -226,24 +210,6 @@ export default function HomePage() {
 
     loadAnnonces();
   }, [filters]);
-
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
-  };
-
-  const handleResetFilters = () => {
-    setFilters({
-      type: '',
-      zone: '',
-      prixMin: '',
-      prixMax: '',
-      surfaceMin: '',
-      nbChambres: '',
-      meuble: '',
-      disponibilite: ''
-    });
-  };
-
 
   const goToSlide = (index) => {
     setCurrentSlide(index);
@@ -257,23 +223,37 @@ export default function HomePage() {
     setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
   };
 
-  // Filtrer les annonces (filtres simples côté client pour la page d'accueil)
-  const filteredAnnonces = Array.isArray(annonces) ? annonces.filter(annonce => {
-    // Vérifier que l'annonce a les propriétés nécessaires
+  // Séparer les annonces par type
+  const logementsAnnonces = Array.isArray(annonces) ? annonces.filter(annonce => {
     if (!annonce || !annonce.id) return false;
-    
-    if (filters.type && annonce.type !== filters.type) return false;
-    if (filters.zone && !annonce.zone?.toLowerCase().includes(filters.zone.toLowerCase())) return false;
-    if (filters.prixMin && annonce.prix < parseInt(filters.prixMin)) return false;
-    if (filters.prixMax && annonce.prix > parseInt(filters.prixMax)) return false;
-    if (filters.surfaceMin && annonce.surface && annonce.surface < parseInt(filters.surfaceMin)) return false;
-    // Gérer à la fois nbChambres (camelCase) et nb_chambres (snake_case)
-    const nbChambres = annonce.nbChambres ?? annonce.nb_chambres;
-    if (filters.nbChambres && nbChambres !== parseInt(filters.nbChambres)) return false;
-    if (filters.meuble !== '' && filters.meuble !== null && annonce.meuble !== (filters.meuble === 'true')) return false;
+    return annonce.type && ['chambre', 'studio', 'appartement'].includes(annonce.type);
+  }).slice(0, 12) : [];
 
-    return true;
-  }) : [];
+  const colocationAnnonces = Array.isArray(annonces) ? annonces.filter(annonce => {
+    if (!annonce || !annonce.id) return false;
+    return annonce.type === 'colocation';
+  }).slice(0, 12) : [];
+
+  // Fonctions de scroll pour les carrousels
+  const scrollLogements = (direction) => {
+    if (!logementsCarouselRef.current) return;
+    const scrollAmount = 400;
+    const currentScroll = logementsCarouselRef.current.scrollLeft;
+    const newScroll = direction === 'next' 
+      ? Math.min(currentScroll + scrollAmount, logementsCarouselRef.current.scrollWidth - logementsCarouselRef.current.clientWidth)
+      : Math.max(currentScroll - scrollAmount, 0);
+    logementsCarouselRef.current.scrollTo({ left: newScroll, behavior: 'smooth' });
+  };
+
+  const scrollColocation = (direction) => {
+    if (!colocationCarouselRef.current) return;
+    const scrollAmount = 400;
+    const currentScroll = colocationCarouselRef.current.scrollLeft;
+    const newScroll = direction === 'next' 
+      ? Math.min(currentScroll + scrollAmount, colocationCarouselRef.current.scrollWidth - colocationCarouselRef.current.clientWidth)
+      : Math.max(currentScroll - scrollAmount, 0);
+    colocationCarouselRef.current.scrollTo({ left: newScroll, behavior: 'smooth' });
+  };
 
   return (
     <div className="homepage-wrapper">
@@ -312,14 +292,10 @@ export default function HomePage() {
             
             {/* Contrôles du carrousel */}
             <button className="carousel-btn carousel-btn-prev" onClick={prevSlide} aria-label="Image précédente">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
+              <IconChevronLeft />
             </button>
             <button className="carousel-btn carousel-btn-next" onClick={nextSlide} aria-label="Image suivante">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
+              <IconChevronRight />
             </button>
 
             {/* Indicateurs */}
@@ -345,23 +321,6 @@ export default function HomePage() {
                 Trouvez votre chez-vous en quelques clics.
               </p>
             </div>
-
-            {/* Call to Action */}
-            <div className="hero-cta">
-              <p className="hero-cta-text">
-                Découvrez des centaines de logements adaptés aux étudiants à Agadir
-              </p>
-              <div className="hero-cta-buttons">
-                <Link to="/logements" className="cta-button cta-primary">
-                  🔍 Voir tous les logements
-                </Link>
-                {isAuthenticated() && (
-                  <Link to="/ajouter-annonce" className="cta-button cta-secondary">
-                    ➕ Publier une annonce
-                  </Link>
-                )}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -372,7 +331,7 @@ export default function HomePage() {
               {stats.map((stat, index) => (
                 <div key={index} className="stat-card">
                   <div className="stat-icon-wrapper">
-                    <div className="stat-icon">{stat.icon}</div>
+                    {stat.icon}
                   </div>
                   <div className="stat-number">{stat.number}</div>
                   <div className="stat-label">{stat.label}</div>
@@ -382,56 +341,132 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Filtres avancés */}
-        <section className="filters-section">
+        {/* Section Features */}
+        <section className="features-section">
           <div className="container">
-            <AdvancedFilters
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onReset={handleResetFilters}
-            />
+            <div className="section-header-modern">
+              <h2 className="section-title-modern">Pourquoi choisir Darna Agadir ?</h2>
+              <p className="section-subtitle-modern">Une plateforme conçue spécialement pour les étudiants</p>
+            </div>
+            <div className="features-grid">
+              {features.map((feature, index) => (
+                <div key={index} className="feature-card">
+                  <div className="feature-icon-wrapper">
+                    {feature.icon}
+                  </div>
+                  <h3 className="feature-title">{feature.title}</h3>
+                  <p className="feature-description">{feature.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Résultats */}
-        <section className="results-section">
+        {/* Carrousel des Logements */}
+        <section className="annonces-carousel-section logements-section">
           <div className="container">
-            <div className="results-header">
-              <h2 className="results-title">
-                {loading ? 'Chargement...' : `${filteredAnnonces.length} logement${filteredAnnonces.length > 1 ? 's' : ''} disponible${filteredAnnonces.length > 1 ? 's' : ''}`}
-              </h2>
-              {!loading && filteredAnnonces.length > 0 && (
-                <div className="results-sort">
-                  <label htmlFor="sort-select">Trier par:</label>
-                  <select id="sort-select" className="sort-select">
-                    <option value="prix-asc">Prix croissant</option>
-                    <option value="prix-desc">Prix décroissant</option>
-                    <option value="recent">Plus récent</option>
-                    <option value="rating">Mieux notés</option>
-                  </select>
-                </div>
-              )}
+            <div className="carousel-section-header">
+              <div className="carousel-title-wrapper">
+                <div className="section-badge">Logements</div>
+                <h2 className="carousel-section-title">
+                  <IconHome />
+                  Logements disponibles
+                </h2>
+                <p className="carousel-section-subtitle">Chambres, studios et appartements pour étudiants</p>
+              </div>
+              <Link to="/logements" className="view-all-link">
+                Voir tout
+                <IconChevronRight />
+              </Link>
             </div>
 
             {loading ? (
               <div className="loading-state">
                 <div className="loading-spinner"></div>
-                <p>Chargement des annonces...</p>
+                <p>Chargement des logements...</p>
               </div>
-            ) : filteredAnnonces.length === 0 ? (
+            ) : logementsAnnonces.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">🔍</div>
-                <h3>Aucun logement trouvé</h3>
-                <p>Essayez de modifier vos critères de recherche ou vos filtres.</p>
-                <button onClick={handleResetFilters} className="btn-reset">
-                  Réinitialiser les filtres
-                </button>
+                <div className="empty-icon">🏠</div>
+                <h3>Aucun logement disponible</h3>
+                <p>De nouvelles annonces seront bientôt disponibles.</p>
               </div>
             ) : (
-              <div className="annonces-grid">
-                {filteredAnnonces.map(annonce => (
-                  <CardAnnonce key={annonce.id} annonce={annonce} />
-                ))}
+              <div className="carousel-wrapper">
+                <button 
+                  className="carousel-nav-btn carousel-nav-prev" 
+                  onClick={() => scrollLogements('prev')}
+                  aria-label="Précédent"
+                >
+                  <IconChevronLeft />
+                </button>
+                <div className="logements-carousel-container annonces-carousel" ref={logementsCarouselRef}>
+                  {logementsAnnonces.map(annonce => (
+                    <CardAnnonce key={annonce.id} annonce={annonce} />
+                  ))}
+                </div>
+                <button 
+                  className="carousel-nav-btn carousel-nav-next" 
+                  onClick={() => scrollLogements('next')}
+                  aria-label="Suivant"
+                >
+                  <IconChevronRight />
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Carrousel des Colocations */}
+        <section className="annonces-carousel-section colocation-section">
+          <div className="container">
+            <div className="carousel-section-header">
+              <div className="carousel-title-wrapper">
+                <div className="section-badge section-badge-colocation">Colocations</div>
+                <h2 className="carousel-section-title">
+                  <IconUsers />
+                  Colocations
+                </h2>
+                <p className="carousel-section-subtitle">Trouvez votre colocataire ou proposez votre logement</p>
+              </div>
+              <Link to="/colocation" className="view-all-link">
+                Voir tout
+                <IconChevronRight />
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Chargement des colocations...</p>
+              </div>
+            ) : colocationAnnonces.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🤝</div>
+                <h3>Aucune colocation disponible</h3>
+                <p>De nouvelles annonces de colocation seront bientôt disponibles.</p>
+              </div>
+            ) : (
+              <div className="carousel-wrapper">
+                <button 
+                  className="carousel-nav-btn carousel-nav-prev" 
+                  onClick={() => scrollColocation('prev')}
+                  aria-label="Précédent"
+                >
+                  <IconChevronLeft />
+                </button>
+                <div className="colocation-carousel-container annonces-carousel" ref={colocationCarouselRef}>
+                  {colocationAnnonces.map(annonce => (
+                    <CardAnnonce key={annonce.id} annonce={annonce} />
+                  ))}
+                </div>
+                <button 
+                  className="carousel-nav-btn carousel-nav-next" 
+                  onClick={() => scrollColocation('next')}
+                  aria-label="Suivant"
+                >
+                  <IconChevronRight />
+                </button>
               </div>
             )}
           </div>
@@ -440,80 +475,109 @@ export default function HomePage() {
         {/* Section Témoignages */}
         <section className="testimonials-section">
           <div className="container">
-            <h2 className="section-title">Ce que disent nos utilisateurs</h2>
+            <div className="testimonials-header">
+              <div className="testimonials-header-content">
+                <h2 className="testimonials-title">
+                  Ce que disent nos utilisateurs
+                </h2>
+                <p className="testimonials-subtitle">
+                  Des milliers d'étudiants nous font confiance
+                </p>
+              </div>
+              <div className="testimonials-stats">
+                <div className="testimonial-stat-item">
+                  <div className="stat-icon-testimonial">
+                    <IconUsers />
+                  </div>
+                  <div className="stat-content-testimonial">
+                    <div className="stat-number-testimonial">2000+</div>
+                    <div className="stat-label-testimonial">Étudiants satisfaits</div>
+                  </div>
+                </div>
+                <div className="testimonial-stat-item">
+                  <div className="stat-icon-testimonial">
+                    <IconStar />
+                  </div>
+                  <div className="stat-content-testimonial">
+                    <div className="stat-number-testimonial">4.9/5</div>
+                    <div className="stat-label-testimonial">Note moyenne</div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="testimonials-grid">
               {testimonials.map((testimonial, index) => (
                 <div key={index} className="testimonial-card">
-                  <div className="testimonial-avatar">{testimonial.avatar}</div>
-                  <div className="testimonial-content">
-                    <p className="testimonial-text">"{testimonial.text}"</p>
-                    <div className="testimonial-author">
-                      <strong>{testimonial.name}</strong>
-                      <span>{testimonial.role}</span>
+                  <div className="testimonial-card-header">
+                    <div className="testimonial-avatar-wrapper">
+                      <img 
+                        src={testimonial.avatar} 
+                        alt={testimonial.name}
+                        className="testimonial-avatar"
+                      />
+                      <div className="testimonial-avatar-badge">
+                        <IconCheckCircle />
+                      </div>
+                    </div>
+                    <div className="testimonial-header-info">
+                      <h3 className="testimonial-name">{testimonial.name}</h3>
+                      <p className="testimonial-role">{testimonial.role}</p>
+                      <p className="testimonial-location">{testimonial.location}</p>
                     </div>
                   </div>
-                  <div className="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                  <div className="testimonial-stars">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <IconStar key={i} />
+                    ))}
+                  </div>
+                  <div className="testimonial-quote-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+                      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
+                    </svg>
+                  </div>
+                  <p className="testimonial-text">"{testimonial.text}"</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Section catégories */}
-        <section className="categories-section">
-          <div className="container">
-            <h2 className="section-title">Parcourir par type</h2>
-            <div className="categories-grid">
-              <Link
-                to="/logements?type=chambre"
-                className="category-card"
-                onClick={() => setFilters({ ...filters, type: 'chambre' })}
-              >
-                <div className="category-icon">🛏️</div>
-                <h3>Chambres</h3>
-                <p>Chambres individuelles dans appartements partagés</p>
-              </Link>
-              <Link
-                to="/logements?type=studio"
-                className="category-card"
-                onClick={() => setFilters({ ...filters, type: 'studio' })}
-              >
-                <div className="category-icon">🏢</div>
-                <h3>Studios</h3>
-                <p>Studios indépendants et meublés</p>
-              </Link>
-              <Link
-                to="/logements?type=appartement"
-                className="category-card"
-                onClick={() => setFilters({ ...filters, type: 'appartement' })}
-              >
-                <div className="category-icon">🏘️</div>
-                <h3>Appartements</h3>
-                <p>Appartements complets pour colocation</p>
-              </Link>
-              <Link
-                to="/logements?type=colocation"
-                className="category-card"
-                onClick={() => setFilters({ ...filters, type: 'colocation' })}
-              >
-                <div className="category-icon">🤝</div>
-                <h3>Colocations</h3>
-                <p>Trouvez vos futurs colocataires</p>
-              </Link>
-            </div>
-          </div>
-        </section>
-
         {/* Section CTA */}
         <section className="cta-section">
-          <div className="container cta-content">
-            <div className="cta-text">
-              <h2>Vous êtes propriétaire ?</h2>
-              <p>Publiez votre annonce gratuitement et trouvez des locataires rapidement.</p>
+          <div className="container">
+            <div className="cta-content">
+              <div className="cta-text-wrapper">
+                <div className="cta-badge">Propriétaire</div>
+                <h2 className="cta-title">Vous êtes propriétaire ?</h2>
+                <p className="cta-description">
+                  Publiez votre annonce gratuitement et trouvez des locataires rapidement. 
+                  Choisissez le type d'annonce qui vous convient.
+                </p>
+              </div>
+              <div className="cta-buttons-wrapper">
+                <Link to="/ajouter-annonce?type=logement" className="cta-button cta-button-logement">
+                  <div className="cta-button-icon">
+                    <IconHome />
+                  </div>
+                  <div className="cta-button-content">
+                    <span className="cta-button-title">Publier un logement</span>
+                    <span className="cta-button-subtitle">Chambre, Studio, Appartement</span>
+                  </div>
+                  <IconChevronRight />
+                </Link>
+                <Link to="/ajouter-annonce?type=colocation" className="cta-button cta-button-colocation">
+                  <div className="cta-button-icon">
+                    <IconUsers />
+                  </div>
+                  <div className="cta-button-content">
+                    <span className="cta-button-title">Publier une colocation</span>
+                    <span className="cta-button-subtitle">Trouvez vos colocataires</span>
+                  </div>
+                  <IconChevronRight />
+                </Link>
+              </div>
             </div>
-            <Link to="/ajouter-annonce" className="cta-button">
-              Publier une annonce
-            </Link>
           </div>
         </section>
       </main>

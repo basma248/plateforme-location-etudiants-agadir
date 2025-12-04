@@ -196,9 +196,18 @@ export const createAnnonce = async (annonceData, token, imageFiles = null) => {
       // Ajouter les champs de l'annonce
       formData.append('titre', annonceData.titre);
       formData.append('type', annonceData.type);
-      formData.append('zone', annonceData.zone);
+      if (annonceData.colocationType) formData.append('colocation_type', annonceData.colocationType);
+      if (annonceData.nbColocatairesRecherches) formData.append('nb_colocataires_recherches', annonceData.nbColocatairesRecherches);
+      if (annonceData.nbColocatairesTrouves !== undefined) formData.append('nb_colocataires_trouves', annonceData.nbColocatairesTrouves);
+      if (annonceData.conditionsColocation) formData.append('conditions_colocation', annonceData.conditionsColocation);
+      if (annonceData.genreRecherche) formData.append('genre_recherche', annonceData.genreRecherche);
+      if (annonceData.typeChambreRecherchee) formData.append('type_chambre_recherchee', annonceData.typeChambreRecherchee);
+      if (annonceData.nbPersonnesSouhaitees) formData.append('nb_personnes_souhaitees', annonceData.nbPersonnesSouhaitees);
+      if (annonceData.chercheSeul !== undefined) formData.append('cherche_seul', annonceData.chercheSeul ? '1' : '0');
+      // S'assurer que zone et prix ne sont jamais null ou undefined
+      formData.append('zone', annonceData.zone || '');
       if (annonceData.adresse) formData.append('adresse', annonceData.adresse);
-      formData.append('prix', annonceData.prix);
+      formData.append('prix', annonceData.prix || 0);
       if (annonceData.surface) formData.append('surface', annonceData.surface);
       formData.append('nb_chambres', annonceData.nbChambres || annonceData.nb_chambres || 1);
       formData.append('description', annonceData.description);
@@ -287,6 +296,14 @@ export const createAnnonce = async (annonceData, token, imageFiles = null) => {
       const backendData = {
         titre: annonceData.titre,
         type: annonceData.type,
+        colocation_type: annonceData.colocationType || null,
+        nb_colocataires_recherches: annonceData.nbColocatairesRecherches || null,
+        nb_colocataires_trouves: annonceData.nbColocatairesTrouves || 0,
+        conditions_colocation: annonceData.conditionsColocation || null,
+        genre_recherche: annonceData.genreRecherche || null,
+        type_chambre_recherchee: annonceData.typeChambreRecherchee || null,
+        nb_personnes_souhaitees: annonceData.nbPersonnesSouhaitees || null,
+        cherche_seul: annonceData.chercheSeul || false,
         zone: annonceData.zone,
         adresse: annonceData.adresse || null,
         prix: annonceData.prix,

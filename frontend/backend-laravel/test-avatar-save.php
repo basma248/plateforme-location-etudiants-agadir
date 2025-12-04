@@ -65,3 +65,5 @@ echo "Avatar réinitialisé à NULL\n";
 
 echo "\n=== FIN DU TEST ===\n";
 
+
+

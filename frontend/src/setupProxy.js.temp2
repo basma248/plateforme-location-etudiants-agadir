@@ -1,0 +1,15 @@
+// Proxy simplifié qui ne bloque pas la compilation
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+module.exports = function(app) {
+  // Proxy minimal - pas de timeout, pas de gestion d'erreur complexe
+  app.use(
+    '/api',
+    createProxyMiddleware({
+      target: 'http://localhost:8000',
+      changeOrigin: true,
+      secure: false,
+      logLevel: 'error', // Seulement les erreurs critiques
+    })
+  );
+};
